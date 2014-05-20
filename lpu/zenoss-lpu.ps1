@@ -16,9 +16,11 @@
 	.DESCRIPTION
 	Need to add some more info here 
 	.EXAMPLE
-	zenoss-lpu.ps1 -u zenny -t domain
+	Domain account
+	zenoss-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
-	zenoss-lpu.ps1 -u benny -t local
+	Local account
+	zenoss-lpu.ps1 -u benny 
 
 #>
 
@@ -32,13 +34,7 @@ param(
 	[Parameter(HelpMessage="User account to provide Zenoss permissions")]
 	[Alias('user', 'u')]
 	[string]
-	$username = 'zenny',
-
-	[Parameter(HelpMessage="Account type (local or domain)")]
-	[Alias('accounttype', 'type', 't')]
-	[string]
-	$domaintype = 'domain'
-
+	$login = 'benny'
 	)
 
 ########################################
@@ -48,11 +44,8 @@ param(
 ########################################
 
 
-#$username = 'zenny'					# Username alone
-#$domaintype = 'domain'		# local or domain
-
-$username = 'benny'
-$domaintype = 'local'
+#$login = 'zenny@zenoss.com'					# Domain Account
+#$login = 'benny'                               # Local Account
 
 # The following values will be set at runtime. They are place holders here.
 $usersid
@@ -66,15 +59,22 @@ $CONTAINER_INHERIT_ACE_FLAG = 0x2
 $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
 
 # Set account information
-if($domaintype.ToLower() -ne 'local'){
-	$domain = $env:USERDOMAIN
-	$dnsdomain = $env:USERDNSDOMAIN
-	$userfqdn = "{0}@{1}" -f $username, $dnsdomain 
+
+if($login.contains("@")){
+	$arrlogin = $login.split("@")
+	$arrdomain = $arrlogin[1].split(".")
+	$domain = $arrdomain[0]
+	$username = $arrlogin[0]
+	$userfqdn = $login
 }
-else {
+else{
 	$domain = $env:COMPUTERNAME
+	$username = $login
 	$userfqdn = "{1}\{0}" -f $username, $domain
 }
+
+# Prep event Log
+New-EventLog -LogName Application -Source "Zenoss-LPU"
 
 ########################################
 #  ------------------------------------
@@ -88,7 +88,9 @@ function get_user_sid($getuser=$userfqdn) {
 	return $objSID.Value
 
 	trap{
-		write-host "User does not exists: $getuser"
+		$message = "User does not exists: $getuser"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -108,9 +110,13 @@ function add_user_to_group($groupname) {
 	else {
 		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
 	}
+	$message = "User added to group: $groupname"
+	send_event $message 'Information'
 
 	trap{
-	 	write-host "Group does not exists: $groupname"
+	 	$message = "Group does not exists: $groupname"
+	 	write-host $message
+	 	send_event $error[0] 'Error'
 	 	continue
  	}
 }
@@ -120,10 +126,13 @@ function add_user_to_service($service, $accessMask){
 	if($servicesddlstart.contains($usersid) -eq $False){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
-
+		$message = "User: $userfqdn added to service"
+		send_event $message 'Information'
 	}
 	else{
-		write-output "Service $service already contains permission for user $userfqdn"
+		$message = "Service $service already contains permission for user $userfqdn"
+		write-output $message
+		send_event $message 'Information'
 	}
 }
 
@@ -135,8 +144,12 @@ function update_folderfile($folderfile, $accessMask){
 		set-acl -path $folderfile -aclobject $folderfileacl
 	}
 
+	$message = "Folder / File updated: $folderfile"
+	send_event $message 'Information'
 	trap{
-		write-host "Folder / File path does not exists: $folderfile"
+		$message = "Folder / File path does not exists: $folderfile"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -189,10 +202,14 @@ function set_registry_security($regkey, $userfqdn, $accessmap){
 		$rule = New-Object System.Security.AccessControl.RegistryAccessRule($userfqdn,$accessmap,"ContainerInherit", "InheritOnly", "Allow")
 		$regacl.SetAccessRule($rule)
 		$regacl | set-acl -path $regkey
+		$message = "Registry key updated: $regkey"
 	}
 
 	trap{
-		write-host "Registry key does not exists: $regkey"
+
+		$message ="Registry key does not exists: $regkey"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -210,13 +227,19 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 		$newsddl = update_sddl $sddlstart $usersid $accessMask
 		$binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
 		Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
+		$message = "Registry security updated: $regkey"
+		send_event $message "Information"
 	}
 	else{
-		write-output "Value already contains permission for user $userfqdn"
+		$message = "Value already contains permission for user $userfqdn"
+		write-output $message
+		send_event $message 'Information'
 	}
 
 	trap{
-		write-host "Registry Security Descriptor failed for $regkey"
+		$message = "Registry Security Descriptor failed for $regkey"
+		write-host $message
+		send_event $message 'Error'
 	}
 }
 
@@ -233,13 +256,19 @@ function allow_access_to_winrm($usersid) {
 		$accessMask = get_accessmask $permissions
 		$newsddl = [string](update_sddl $sddlstart $usersid $accessMask)
 		Set-Item WSMan:\localhost\Service\RootSDDL -value $newsddl -Force
+		$message = "WinRM Perms setup correctly"
+		send_event $message "Information"
 	}
 	else {
-		write-output "User already has permissions set"
+		$message ="User already has permissions set"
+		write-output $message
+		send_event $message 'Information'
 	}
 
 	trap{
-		write-host "Problem setting RootSDDL permissions"
+		$message = "Problem setting RootSDDL permissions"
+		write-output $message
+		send_event $message 'Error'
 	}
 }
 
@@ -327,13 +356,17 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
 		}
 }
 
+function send_event($message, $errortype){
+	Write-EventLog -LogName Application -Source "Zenoss-LPU" -EntryType $errortype -EventId 1 -Message $message
+}
+
 ########################################
 #  ------------------------------------
 #  -------- Execution Center ----------
 #  ------------------------------------
 ########################################
 
-<# Remove this line along with the last line of this file. #>
+<# Remove this line along with the last line of this file.
 # Initialize user information
 $usersid = get_user_sid
 
@@ -437,32 +470,11 @@ foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
 }
 
-
-##############################
-# Update MSSQL Permissions
-##############################
-<#
-$dbinstances = get_db_instances
-
-if($dbinstances){
-	load_sql_assembly
-}
-
-foreach($dbinstance in $dbinstances){
-	update_sql_perms $dbinstance  "ViewServerState"
-}
-#>
-
-
-##############################
-# Setup Cluster permissions
-##############################
-
-
-
 ##############################
 # Message Center
 ##############################
 
-write-output "Zenoss Resource Manager security permissions have been set for $userfqdn"
-<# Remove this line and the line just after the Execution Center section title to enable script. #> 
+$message = "Zenoss Resource Manager security permissions have been set for $userfqdn"
+write-output $message
+send_event $message 'Information'
+Remove this line and the line just after the Execution Center section title to enable script. #> 
