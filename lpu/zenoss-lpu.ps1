@@ -76,6 +76,9 @@ else {
 	$userfqdn = "{1}\{0}" -f $username, $domain
 }
 
+# Prep event Log
+New-EventLog -LogName Application -Source "Zenoss-LPU"
+
 ########################################
 #  ------------------------------------
 #  -----------  Functions -------------
@@ -88,7 +91,9 @@ function get_user_sid($getuser=$userfqdn) {
 	return $objSID.Value
 
 	trap{
-		write-host "User does not exists: $getuser"
+		$message = "User does not exists: $getuser"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -327,13 +332,17 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
 		}
 }
 
+function send_event($message, $errortype){
+	Write-EventLog -LogName Application -Source "Zenoss-LPU" -EntryType $errortype -EventId 1 -Message $message
+}
+
 ########################################
 #  ------------------------------------
 #  -------- Execution Center ----------
 #  ------------------------------------
 ########################################
 
-<# Remove this line along with the last line of this file. #>
+<# Remove this line along with the last line of this file.
 # Initialize user information
 $usersid = get_user_sid
 
@@ -437,32 +446,11 @@ foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
 }
 
-
-##############################
-# Update MSSQL Permissions
-##############################
-<#
-$dbinstances = get_db_instances
-
-if($dbinstances){
-	load_sql_assembly
-}
-
-foreach($dbinstance in $dbinstances){
-	update_sql_perms $dbinstance  "ViewServerState"
-}
-#>
-
-
-##############################
-# Setup Cluster permissions
-##############################
-
-
-
 ##############################
 # Message Center
 ##############################
 
-write-output "Zenoss Resource Manager security permissions have been set for $userfqdn"
-<# Remove this line and the line just after the Execution Center section title to enable script. #> 
+$message = "Zenoss Resource Manager security permissions have been set for $userfqdn"
+write-output $message
+send_event $message 'Information'
+Remove this line and the line just after the Execution Center section title to enable script. #> 
