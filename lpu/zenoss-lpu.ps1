@@ -16,9 +16,11 @@
 	.DESCRIPTION
 	Need to add some more info here 
 	.EXAMPLE
-	zenoss-lpu.ps1 -u zenny -t domain
+	Domain account
+	zenoss-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
-	zenoss-lpu.ps1 -u benny -t local
+	Local account
+	zenoss-lpu.ps1 -u benny 
 
 #>
 
@@ -32,13 +34,7 @@ param(
 	[Parameter(HelpMessage="User account to provide Zenoss permissions")]
 	[Alias('user', 'u')]
 	[string]
-	$username = 'zenny',
-
-	[Parameter(HelpMessage="Account type (local or domain)")]
-	[Alias('accounttype', 'type', 't')]
-	[string]
-	$domaintype = 'domain'
-
+	$login = 'benny'
 	)
 
 ########################################
@@ -51,8 +47,8 @@ param(
 #$username = 'zenny'					# Username alone
 #$domaintype = 'domain'		# local or domain
 
-$username = 'benny'
-$domaintype = 'local'
+#$username = 'benny'
+#$domaintype = 'local'
 
 # The following values will be set at runtime. They are place holders here.
 $usersid
@@ -66,13 +62,17 @@ $CONTAINER_INHERIT_ACE_FLAG = 0x2
 $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
 
 # Set account information
-if($domaintype.ToLower() -ne 'local'){
-	$domain = $env:USERDOMAIN
-	$dnsdomain = $env:USERDNSDOMAIN
-	$userfqdn = "{0}@{1}" -f $username, $dnsdomain 
+
+if($login.contains("@")){
+	$arrlogin = $login.split("@")
+	$arrdomain = $arrlogin.split(".")
+	$domain = $arrdomain[0]
+	$username = $arrlogin[0]
+	$userfqdn = $login
 }
-else {
+else{
 	$domain = $env:COMPUTERNAME
+	$username = $login
 	$userfqdn = "{1}\{0}" -f $username, $domain
 }
 
