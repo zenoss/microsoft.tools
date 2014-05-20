@@ -120,6 +120,8 @@ function add_user_to_group($groupname) {
 	 	$message = "Group does not exists: $groupname"
 	 	write-host $message
 	 	send_event $message 'Error'
+	 	send_event $error[0] 'Error'
+	 	send_event "Domain set: $domain / Username set: $username" 'Error'
 	 	continue
  	}
 }
