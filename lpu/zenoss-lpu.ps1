@@ -113,7 +113,7 @@ function add_user_to_group($groupname) {
 	else {
 		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
 	}
-	$message "User added to group: $groupname"
+	$message = "User added to group: $groupname"
 	send_event $message, 'Information'
 
 	trap{
