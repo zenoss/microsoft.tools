@@ -114,14 +114,12 @@ function add_user_to_group($groupname) {
 		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
 	}
 	$message = "User added to group: $groupname"
-	send_event $message, 'Information'
+	send_event $message 'Information'
 
 	trap{
 	 	$message = "Group does not exists: $groupname"
 	 	write-host $message
-	 	send_event $message 'Error'
 	 	send_event $error[0] 'Error'
-	 	send_event "Domain set: $domain / Username set: $username" 'Error'
 	 	continue
  	}
 }
@@ -137,7 +135,7 @@ function add_user_to_service($service, $accessMask){
 	else{
 		$message = "Service $service already contains permission for user $userfqdn"
 		write-output $message
-		send_event $message 'Error'
+		send_event $message 'Information'
 	}
 }
 
