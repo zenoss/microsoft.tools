@@ -113,9 +113,13 @@ function add_user_to_group($groupname) {
 	else {
 		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
 	}
+	$message "User added to group: $groupname"
+	send_event $message, 'Information'
 
 	trap{
-	 	write-host "Group does not exists: $groupname"
+	 	$message = "Group does not exists: $groupname"
+	 	write-host $message
+	 	send_event $message 'Error'
 	 	continue
  	}
 }
@@ -125,10 +129,13 @@ function add_user_to_service($service, $accessMask){
 	if($servicesddlstart.contains($usersid) -eq $False){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
-
+		$message = "User: $userfqdn added to service"
+		send_event $message 'Information'
 	}
 	else{
-		write-output "Service $service already contains permission for user $userfqdn"
+		$message = "Service $service already contains permission for user $userfqdn"
+		write-output $message
+		send_event $message 'Error'
 	}
 }
 
@@ -140,8 +147,12 @@ function update_folderfile($folderfile, $accessMask){
 		set-acl -path $folderfile -aclobject $folderfileacl
 	}
 
+	$message = "Folder / File updated: $folderfile"
+	send_event $message 'Information'
 	trap{
-		write-host "Folder / File path does not exists: $folderfile"
+		$message = "Folder / File path does not exists: $folderfile"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -194,10 +205,14 @@ function set_registry_security($regkey, $userfqdn, $accessmap){
 		$rule = New-Object System.Security.AccessControl.RegistryAccessRule($userfqdn,$accessmap,"ContainerInherit", "InheritOnly", "Allow")
 		$regacl.SetAccessRule($rule)
 		$regacl | set-acl -path $regkey
+		$message = "Registry key updated: $regkey"
 	}
 
 	trap{
-		write-host "Registry key does not exists: $regkey"
+
+		$message ="Registry key does not exists: $regkey"
+		write-host $message
+		send_event $message 'Error'
 		continue
 	}
 }
@@ -215,13 +230,19 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 		$newsddl = update_sddl $sddlstart $usersid $accessMask
 		$binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
 		Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
+		$message = "Registry security updated: $regkey"
+		send_event $message "Information"
 	}
 	else{
-		write-output "Value already contains permission for user $userfqdn"
+		$message = "Value already contains permission for user $userfqdn"
+		write-output $message
+		send_event $message 'Information'
 	}
 
 	trap{
-		write-host "Registry Security Descriptor failed for $regkey"
+		$message = "Registry Security Descriptor failed for $regkey"
+		write-host $message
+		send_event $message 'Error'
 	}
 }
 
@@ -238,13 +259,19 @@ function allow_access_to_winrm($usersid) {
 		$accessMask = get_accessmask $permissions
 		$newsddl = [string](update_sddl $sddlstart $usersid $accessMask)
 		Set-Item WSMan:\localhost\Service\RootSDDL -value $newsddl -Force
+		$message = "WinRM Perms setup correctly"
+		send_event $message "Information"
 	}
 	else {
-		write-output "User already has permissions set"
+		$message ="User already has permissions set"
+		write-output $message
+		send_event $message 'Information'
 	}
 
 	trap{
-		write-host "Problem setting RootSDDL permissions"
+		$message = "Problem setting RootSDDL permissions"
+		write-output $message
+		send_event $message 'Error'
 	}
 }
 
