@@ -65,7 +65,7 @@ $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescri
 
 if($login.contains("@")){
 	$arrlogin = $login.split("@")
-	$arrdomain = $arrlogin.split(".")
+	$arrdomain = $arrlogin[1].split(".")
 	$domain = $arrdomain[0]
 	$username = $arrlogin[0]
 	$userfqdn = $login
