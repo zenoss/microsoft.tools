@@ -44,11 +44,8 @@ param(
 ########################################
 
 
-#$username = 'zenny'					# Username alone
-#$domaintype = 'domain'		# local or domain
-
-#$username = 'benny'
-#$domaintype = 'local'
+#$login = 'zenny@zenoss.com'					# Domain Account
+#$login = 'benny'                               # Local Account
 
 # The following values will be set at runtime. They are place holders here.
 $usersid
