@@ -74,7 +74,9 @@ else{
 }
 
 # Prep event Log
-New-EventLog -LogName Application -Source "Zenoss-LPU"
+if (![System.Diagnostics.EventLog]::SourceExists('Zenoss-LPU')){
+	New-EventLog -LogName Application -Source "Zenoss-LPU"
+}
 
 ########################################
 #  ------------------------------------
