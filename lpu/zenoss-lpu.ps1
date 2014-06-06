@@ -98,7 +98,7 @@ function get_user_sid($getuser=$userfqdn) {
 }
 
 function add_user_to_group($groupname) {
-	$objADSI = [ADSI]"WinNT://localhost/$groupname,group"
+	$objADSI = [ADSI]"WinNT://./$groupname,group"
 	$objADSIUser = [ADSI]"WinNT://$domain/$username"
 	$objMembers = @($objADSI.psbase.Invoke("Members"))
 	if($objMembers.Count -gt 0){
@@ -247,7 +247,7 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 
 function allow_access_to_winrm($usersid) {
 	if($usersid.Length -gt 5) {
-		$sddlstart = [string](Get-Item WSMan:\localhost\Service\RootSDDL).Value
+		$sddlstart = [string](Get-Item WSMan:\.\Service\RootSDDL).Value
 	} 
 	else {
 		throw "Error getting WinRM SDDL"
@@ -257,7 +257,7 @@ function allow_access_to_winrm($usersid) {
 		$permissions = @("genericexecute","genericread")
 		$accessMask = get_accessmask $permissions
 		$newsddl = [string](update_sddl $sddlstart $usersid $accessMask)
-		Set-Item WSMan:\localhost\Service\RootSDDL -value $newsddl -Force
+		Set-Item WSMan:\.\Service\RootSDDL -value $newsddl -Force
 		$message = "WinRM Perms setup correctly"
 		send_event $message "Information"
 	}
