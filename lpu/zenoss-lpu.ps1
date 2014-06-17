@@ -245,32 +245,25 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 	}
 }
 
+
 function allow_access_to_winrm($usersid) {
-	if($usersid.Length -gt 5) {
-		$sddlstart = [string](Get-Item WSMan:\.\Service\RootSDDL).Value
-	} 
-	else {
-		throw "Error getting WinRM SDDL"
-		break
+	$sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
+	if($usersid.Length -gt 5){
+		$rootsddlkey = get-itemproperty $sddlkey -Name "rootSDDL"
+		$sddlstart = $rootsddlkey.rootSDDL
 	}
+	else
+	{
+		send_event "Problem getting sddl key from registry" "Error"
+		exit
+	}
+
 	if ($sddlstart.contains($usersid) -eq $False){
 		$permissions = @("genericexecute","genericread")
 		$accessMask = get_accessmask $permissions
 		$newsddl = [string](update_sddl $sddlstart $usersid $accessMask)
-		Set-Item WSMan:\.\Service\RootSDDL -value $newsddl -Force
-		$message = "WinRM Perms setup correctly"
-		send_event $message "Information"
-	}
-	else {
-		$message ="User already has permissions set"
-		write-output $message
-		send_event $message 'Information'
-	}
-
-	trap{
-		$message = "Problem setting RootSDDL permissions"
-		write-output $message
-		send_event $message 'Error'
+		set-itemproperty $sddlkey -name "rootSDDL" -Value $newsddl
+		send_event "RootSDDL has updated" "Information"
 	}
 }
 
