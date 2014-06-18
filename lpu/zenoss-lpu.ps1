@@ -247,15 +247,29 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 
 
 function allow_access_to_winrm($usersid) {
+	
+	$defaultkey = "O:NSG:BAD:P(A;;GA;;;BA)S:P(AU;FA;GA;;;WD)(AU;SA;GWGX;;;WD)"
 	$sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
 	if($usersid.Length -gt 5){
-		$rootsddlkey = get-itemproperty $sddlkey -Name "rootSDDL"
-		$sddlstart = $rootsddlkey.rootSDDL
+		if ((get-itemproperty $sddlkey).rootSDDL -eq $null) {
+			$sddlstart = $defaultkey
+			send_event "Registry RootSDDL doesn't exists. Will use default settings." "Information"
+			}
+		else{
+			$rootsddlkey = get-itemproperty $sddlkey -Name "rootSDDL"
+			$sddlstart = $rootsddlkey.rootSDDL
+			send_event "Current RootSDDL $sddlstart" "Information"
+			}
 	}
 	else
 	{
 		send_event "Problem getting sddl key from registry" "Error"
 		exit
+	}
+
+	if ($sddlstart.Length -eq 0){
+		$sddlstart = $defaultkey
+		send_event "Using default RootSDDL of $sddlstart" "Information"
 	}
 
 	if ($sddlstart.contains($usersid) -eq $False){
