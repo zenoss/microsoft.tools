@@ -34,7 +34,10 @@ param(
 	[Parameter(HelpMessage="User account to provide Zenoss permissions")]
 	[Alias('user', 'u')]
 	[string]
-	$login = 'benny'
+	$login = 'benny',
+	[Alias('force','f')]
+	[bool]
+	$force_update = $false
 	)
 
 ########################################
@@ -125,7 +128,7 @@ function add_user_to_group($groupname) {
 
 function add_user_to_service($service, $accessMask){
 	$servicesddlstart = [string](CMD /C "sc sdshow $service")
-	if($servicesddlstart.contains($usersid) -eq $False){
+	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
 		$message = "User: $userfqdn added to service"
@@ -319,7 +322,8 @@ function get_accessmask($permissions){
 		"servicequeryconfig"	= 0x0001;
 		"servicequeryservice"	= 0x0004;
 		"servicestart"			= 0x0010;
-		"servicestop"			= 0x0020
+		"servicestop"			= 0x0020;
+		"serviceinterrogate"    = 0x0080
 	}
 
 	$accessMask = 0
@@ -473,7 +477,7 @@ foreach($folderfile in $folderfiles){
 ##############################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
-$serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity")
+$serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
 add_user_to_service 'SCMANAGER' $serviceaccessmap
 foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
