@@ -127,7 +127,7 @@ function add_user_to_group($groupname) {
 }
 
 function add_user_to_service($service, $accessMask){
-	$servicesddlstart = [string](CMD /C "sc sdshow $service")
+	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
 	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
