@@ -40,7 +40,7 @@ s = Session()
 
 # main script
 gssflags = kerberos.GSS_C_CONF_FLAG|kerberos.GSS_C_MUTUAL_FLAG|kerberos.GSS_C_SEQUENCE_FLAG|kerberos.GSS_C_INTEG_FLAG
-result_code, context = kerberos.authGSSClientInit('HTTP@win2008mem.solad.loc',gssflags=gssflags)
+result_code, context = kerberos.authGSSClientInit('HTTP@{0}'.format(k_hostname),gssflags=gssflags)
 if result_code != kerberos.AUTH_GSS_COMPLETE:
     logging.error('kerberos authGSSClientInit failed')
 
@@ -97,9 +97,8 @@ elif resp.status_code == httplib.UNAUTHORIZED:
 elif resp.status_code == httplib.OK:
     logging.debug("HTTP OK!  Query Sent")
     print("HTTP OK!  Query Sent")
-    #print_body = ''.join([i if ord(i) < 128 else '.' for i in resp.content])
     print_body = ''.join([i if isprint(i) else '.' for i in resp.content])
-    print("Response from server:{0}".format(print_body))
+    print("Response from server:\n{0}".format(print_body))
     b_start = resp.content.index("Content-Type: application/octet-stream") + \
               len("Content-Type: application/octet-stream\r\n")
     b_end = resp.content.index("--Encrypted Boundary",b_start)
