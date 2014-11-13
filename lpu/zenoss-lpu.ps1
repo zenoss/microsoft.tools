@@ -34,7 +34,10 @@ param(
 	[Parameter(HelpMessage="User account to provide Zenoss permissions")]
 	[Alias('user', 'u')]
 	[string]
-	$login = 'benny'
+	$login = 'benny',
+	[Alias('force','f')]
+	[bool]
+	$force_update = $false
 	)
 
 ########################################
@@ -74,7 +77,9 @@ else{
 }
 
 # Prep event Log
-New-EventLog -LogName Application -Source "Zenoss-LPU"
+if (![System.Diagnostics.EventLog]::SourceExists('Zenoss-LPU')){
+	New-EventLog -LogName Application -Source "Zenoss-LPU"
+}
 
 ########################################
 #  ------------------------------------
@@ -96,7 +101,7 @@ function get_user_sid($getuser=$userfqdn) {
 }
 
 function add_user_to_group($groupname) {
-	$objADSI = [ADSI]"WinNT://localhost/$groupname,group"
+	$objADSI = [ADSI]"WinNT://./$groupname,group"
 	$objADSIUser = [ADSI]"WinNT://$domain/$username"
 	$objMembers = @($objADSI.psbase.Invoke("Members"))
 	if($objMembers.Count -gt 0){
@@ -114,7 +119,7 @@ function add_user_to_group($groupname) {
 	send_event $message 'Information'
 
 	trap{
-	 	$message = "Group does not exists: $groupname"
+        $message = "Group does not exist: $groupname"
 	 	write-host $message
 	 	send_event $error[0] 'Error'
 	 	continue
@@ -122,8 +127,8 @@ function add_user_to_group($groupname) {
 }
 
 function add_user_to_service($service, $accessMask){
-	$servicesddlstart = [string](CMD /C "sc sdshow $service")
-	if($servicesddlstart.contains($usersid) -eq $False){
+	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
+	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
 		$message = "User: $userfqdn added to service"
@@ -240,35 +245,43 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 		$message = "Registry Security Descriptor failed for $regkey"
 		write-host $message
 		send_event $message 'Error'
-	}
+        continue
+    }
 }
 
+
 function allow_access_to_winrm($usersid) {
-	if($usersid.Length -gt 5) {
-		$sddlstart = [string](Get-Item WSMan:\localhost\Service\RootSDDL).Value
-	} 
-	else {
-		throw "Error getting WinRM SDDL"
-		break
+	
+	$defaultkey = "O:NSG:BAD:P(A;;GA;;;BA)S:P(AU;FA;GA;;;WD)(AU;SA;GWGX;;;WD)"
+	$sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
+	if($usersid.Length -gt 5){
+		if ((get-itemproperty $sddlkey).rootSDDL -eq $null) {
+			$sddlstart = $defaultkey
+			send_event "Registry RootSDDL doesn't exists. Will use default settings." "Information"
+			}
+		else{
+			$rootsddlkey = get-itemproperty $sddlkey -Name "rootSDDL"
+			$sddlstart = $rootsddlkey.rootSDDL
+			send_event "Current RootSDDL $sddlstart" "Information"
+			}
 	}
+	else
+	{
+		send_event "Problem getting sddl key from registry" "Error"
+		exit
+	}
+
+	if ($sddlstart.Length -eq 0){
+		$sddlstart = $defaultkey
+		send_event "Using default RootSDDL of $sddlstart" "Information"
+	}
+
 	if ($sddlstart.contains($usersid) -eq $False){
 		$permissions = @("genericexecute","genericread")
 		$accessMask = get_accessmask $permissions
 		$newsddl = [string](update_sddl $sddlstart $usersid $accessMask)
-		Set-Item WSMan:\localhost\Service\RootSDDL -value $newsddl -Force
-		$message = "WinRM Perms setup correctly"
-		send_event $message "Information"
-	}
-	else {
-		$message ="User already has permissions set"
-		write-output $message
-		send_event $message 'Information'
-	}
-
-	trap{
-		$message = "Problem setting RootSDDL permissions"
-		write-output $message
-		send_event $message 'Error'
+		set-itemproperty $sddlkey -name "rootSDDL" -Value $newsddl
+		send_event "RootSDDL has updated" "Information"
 	}
 }
 
@@ -310,7 +323,8 @@ function get_accessmask($permissions){
 		"servicequeryconfig"	= 0x0001;
 		"servicequeryservice"	= 0x0004;
 		"servicestart"			= 0x0010;
-		"servicestop"			= 0x0020
+		"servicestop"			= 0x0020;
+		"serviceinterrogate"    = 0x0080
 	}
 
 	$accessMask = 0
@@ -327,10 +341,14 @@ function get_accessmask($permissions){
 }
 
 function add_ace_to_namespace($accessMask, $namespaceParams){
-	$currentSecurityDescriptor = Invoke-WmiMethod @namespaceParams -Name GetSecurityDescriptor
+	$currentSecurityDescriptor = Invoke-WmiMethod @namespaceParams -Name GetSecurityDescriptor -ErrorAction 'silentlycontinue'
+    if ($? -eq $false){
+        Write-Host "GetSecurityDescriptor is not valid for this operating system.  Add user to namespaces manually."
+        Return $false
+    }
 	if($currentSecurityDescriptor.ReturnValue -ne 0){
-		throw "Failed to get security descriptor for namespace: $namespace"
-	}
+        throw "Failed to get security descriptor for namespace: $namespace"
+    }
 	$objACL = $currentSecurityDescriptor.Descriptor
 
 	$objACE = (New-Object System.Management.ManagementClass("win32_Ace")).CreateInstance()
@@ -354,6 +372,7 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
 	if ($setresults.ReturnValue -ne 0) {
 		throw "Set Security Descriptor FAILED: $($setresults.ReturnValue)"
 		}
+    return $true
 }
 
 function send_event($message, $errortype){
@@ -388,7 +407,10 @@ $namespaces = @(
 $namespaceaccessmap = get_accessmask @("Enable","MethodExecute","ReadSecurity","RemoteAccess")
 foreach ($namespace in $namespaces) {
 	$namespaceParams = @{Namespace=$namespace;Path="__systemsecurity=@"}
-	add_ace_to_namespace $namespaceaccessmap $namespaceParams
+	$ret = add_ace_to_namespace $namespaceaccessmap $namespaceParams
+    if ($ret -eq $false){
+        break
+    }
 }
 
 ##############################
@@ -464,7 +486,7 @@ foreach($folderfile in $folderfiles){
 ##############################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
-$serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity")
+$serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
 add_user_to_service 'SCMANAGER' $serviceaccessmap
 foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
