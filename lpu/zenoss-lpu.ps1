@@ -119,7 +119,7 @@ function add_user_to_group($groupname) {
 	send_event $message 'Information'
 
 	trap{
-	 	$message = "Group does not exists: $groupname"
+        $message = "Group does not exist: $groupname"
 	 	write-host $message
 	 	send_event $error[0] 'Error'
 	 	continue
@@ -245,7 +245,8 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
 		$message = "Registry Security Descriptor failed for $regkey"
 		write-host $message
 		send_event $message 'Error'
-	}
+        continue
+    }
 }
 
 
@@ -340,10 +341,14 @@ function get_accessmask($permissions){
 }
 
 function add_ace_to_namespace($accessMask, $namespaceParams){
-	$currentSecurityDescriptor = Invoke-WmiMethod @namespaceParams -Name GetSecurityDescriptor
+	$currentSecurityDescriptor = Invoke-WmiMethod @namespaceParams -Name GetSecurityDescriptor -ErrorAction 'silentlycontinue'
+    if ($? -eq $false){
+        Write-Host "GetSecurityDescriptor is not valid for this operating system.  Add user to namespaces manually."
+        Return $false
+    }
 	if($currentSecurityDescriptor.ReturnValue -ne 0){
-		throw "Failed to get security descriptor for namespace: $namespace"
-	}
+        throw "Failed to get security descriptor for namespace: $namespace"
+    }
 	$objACL = $currentSecurityDescriptor.Descriptor
 
 	$objACE = (New-Object System.Management.ManagementClass("win32_Ace")).CreateInstance()
@@ -367,6 +372,7 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
 	if ($setresults.ReturnValue -ne 0) {
 		throw "Set Security Descriptor FAILED: $($setresults.ReturnValue)"
 		}
+    return $true
 }
 
 function send_event($message, $errortype){
@@ -401,7 +407,10 @@ $namespaces = @(
 $namespaceaccessmap = get_accessmask @("Enable","MethodExecute","ReadSecurity","RemoteAccess")
 foreach ($namespace in $namespaces) {
 	$namespaceParams = @{Namespace=$namespace;Path="__systemsecurity=@"}
-	add_ace_to_namespace $namespaceaccessmap $namespaceParams
+	$ret = add_ace_to_namespace $namespaceaccessmap $namespaceParams
+    if ($ret -eq $false){
+        break
+    }
 }
 
 ##############################
