@@ -6,7 +6,8 @@
 # This script modifies the registry and several system access permissions. Use with caution!
 #
 # To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
-
+#
+# This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
 
 
 
@@ -14,14 +15,20 @@
 	.SYNOPSIS
 	Configure local system permissions to support least privilege user access for Zenoss Resource Manager monitoring.
 	.DESCRIPTION
-	Need to add some more info here 
-	.EXAMPLE
+	This script configures system permissions to allow a least privileged user access to WMI namespaces, service querying,
+    WinRM/WinRS access, registry keys, local groups, and specific folder/file permissions.
+    .INPUT
+    -u or -user to specify the user name.  Enter just the user name for a local user and user@domain.com for a domain user.
+    -f or -force to force an update to the service properties for the user.
+    .EXAMPLE
 	Domain account
 	zenoss-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
 	Local account
 	zenoss-lpu.ps1 -u benny 
-
+    .EXAMPLE
+    Update service permissions for domain account
+    zenoss-lpu.ps1 -u zenny@zenoss.com -force
 #>
 
 ########################################
@@ -36,7 +43,7 @@ param(
 	[string]
 	$login = 'benny',
 	[Alias('force','f')]
-	[bool]
+	[switch]
 	$force_update = $false
 	)
 
