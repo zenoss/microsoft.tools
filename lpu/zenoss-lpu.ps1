@@ -43,7 +43,7 @@ param(
 	[string]
 	$login = 'benny',
 	[Alias('force','f')]
-	[bool]
+	[switch]
 	$force_update = $false
 	)
 
