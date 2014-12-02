@@ -476,7 +476,7 @@ foreach($folderfile in $folderfiles){
         Write-Host "`tUser $userfqdn does not have read access to folder/file $folderfile"
     }
     else {
-        Write-Host "`tThe folder/file $folderfile does not exist on this system."
+        Write-Host "`tThe folder/file $folderfile does not exist on this system.  This is not a critical error."
     }
 }
 
