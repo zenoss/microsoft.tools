@@ -71,11 +71,16 @@ $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescri
 # Set account information
 
 if($login.contains("@")){
-	$arrlogin = $login.split("@")
-	$arrdomain = $arrlogin[1].split(".")
-	$domain = $arrdomain[0]
-	$username = $arrlogin[0]
-	$userfqdn = $login
+    $arrlogin = $login.split("@")
+    $arrdomain = $arrlogin[1].split(".")
+    $domain = $arrdomain[0]
+    if ($arrdomain.Count -gt 2){
+        for ($i = 1; $i -lt $arrdomain.Count-1; $i++) {
+            $domain += "."+$arrdomain[$i]
+        }
+    }
+    $username = $arrlogin[0]
+    $userfqdn = $login
 }
 else{
 	$domain = $env:COMPUTERNAME
