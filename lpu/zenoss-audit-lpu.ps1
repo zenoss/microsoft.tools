@@ -339,7 +339,7 @@ function send_event($message, $errortype){
 $usersid = get_user_sid
 
 ##############################
-# Query Namespace Security
+# Validate Namespace Security
 ##############################
 # Root/CIMv2/Security/MicrosoftTpm  -->  OperatingSystem modeler - Win32_OperatingSystem
 # Root/RSOP/Computer  -->  OperatingSystem modeler - Win32_ComputerSystem
@@ -368,7 +368,7 @@ foreach ($namespace in $namespaces) {
 }
 
 ##############################
-# Query remote WinRM/WinRS access
+# Validate remote WinRM/WinRS access
 ##############################
 Write-Host "`nTesting $userfqdn for access to winrm"
 $winrm_ret = test_access_to_winrm $usersid 
@@ -380,7 +380,7 @@ else{
 }
 
 ##############################
-# Query Registry permissions
+# Validate Registry permissions
 ##############################
 $registrykeys = @(
 	"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
@@ -405,7 +405,7 @@ foreach ($registrykey in $registrykeys) {
 }
 
 ##############################
-# Query Registry Security Descriptor Values
+# Validate Registry Security Descriptor Values
 ##############################
 $registryvaluekeys = @{
 	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
@@ -430,7 +430,7 @@ foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 }
 
 ##############################
-# Query local group permissions
+# Validate local group permissions
 ##############################
 $localgroups = @(
 	"Performance Monitor Users",
@@ -455,7 +455,7 @@ foreach ($localgroup in $localgroups) {
 }
 
 ##############################
-# Query Folder/File permissions
+# Validate Folder/File permissions
 ##############################
 
 $folderfiles = @(
@@ -482,7 +482,7 @@ foreach($folderfile in $folderfiles){
 
 
 ##############################
-# Query Services Permissions
+# Validate Services Permissions
 ##############################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
