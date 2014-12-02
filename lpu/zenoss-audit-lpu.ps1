@@ -3,32 +3,30 @@
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
-# This script modifies the registry and several system access permissions. Use with caution!
+# This script queries the registry and several system access permissions. Use with caution!
 #
-# To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
+# This script will query WMI namespace security, remote winrm/winrs access, registry permissions,
+# group membership, folder/file permissions, and service permissions.  The point is to determine
+# if a given user will be able to access information needed to model/monitor a Windows server.
+# This script does not make any changes to the system.  It will issue events.  But, as with any script, 
+# read thoroughly and use with caution.
 #
-# This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
-
 
 
 <#
 	.SYNOPSIS
-	Configure local system permissions to support least privilege user access for Zenoss Resource Manager monitoring.
+	Query local system permissions to support least privilege user access for Zenoss Resource Manager monitoring.
 	.DESCRIPTION
-	This script configures system permissions to allow a least privileged user access to WMI namespaces, service querying,
+	This script queries system permissions to determine if a user has access to WMI namespaces, service querying,
     WinRM/WinRS access, registry keys, local groups, and specific folder/file permissions.
     .INPUT
     -u or -user to specify the user name.  Enter just the user name for a local user and user@domain.com for a domain user.
-    -f or -force to force an update to the service properties for the user.
 	.EXAMPLE
 	Domain account
-	zenoss-lpu.ps1 -u zenny@zenoss.com
+	zenoss-audit-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
 	Local account
-	zenoss-lpu.ps1 -u benny 
-    .EXAMPLE
-    Update service permissions for domain account
-    zenoss-lpu.ps1 -u zenny@zenoss.com -force
+	zenoss-audit-lpu.ps1 -u benny 
 #>
 
 ########################################
@@ -38,7 +36,7 @@
 ########################################
 
 param(
-	[Parameter(HelpMessage="User account to provide Zenoss permissions")]
+	[Parameter(HelpMessage="User account to query Zenoss permissions")]
 	[Alias('user', 'u')]
 	[string]
 	$login = 'benny',
@@ -341,7 +339,7 @@ function send_event($message, $errortype){
 $usersid = get_user_sid
 
 ##############################
-# Configure Namespace Security
+# Query Namespace Security
 ##############################
 # Root/CIMv2/Security/MicrosoftTpm  -->  OperatingSystem modeler - Win32_OperatingSystem
 # Root/RSOP/Computer  -->  OperatingSystem modeler - Win32_ComputerSystem
@@ -370,7 +368,7 @@ foreach ($namespace in $namespaces) {
 }
 
 ##############################
-# Configure RootSDDL for remote WinRM/WinRS access
+# Query remote WinRM/WinRS access
 ##############################
 Write-Host "`nTesting $userfqdn for access to winrm"
 $winrm_ret = test_access_to_winrm $usersid 
@@ -382,7 +380,7 @@ else{
 }
 
 ##############################
-# Set Registry permissions
+# Query Registry permissions
 ##############################
 $registrykeys = @(
 	"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
@@ -407,7 +405,7 @@ foreach ($registrykey in $registrykeys) {
 }
 
 ##############################
-# Set Registry Security Descriptor Values
+# Query Registry Security Descriptor Values
 ##############################
 $registryvaluekeys = @{
 	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
@@ -432,7 +430,7 @@ foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 }
 
 ##############################
-# Update local group permissions
+# Query local group permissions
 ##############################
 $localgroups = @(
 	"Performance Monitor Users",
@@ -457,7 +455,7 @@ foreach ($localgroup in $localgroups) {
 }
 
 ##############################
-# Modify Folder/File permissions
+# Query Folder/File permissions
 ##############################
 
 $folderfiles = @(
@@ -484,7 +482,7 @@ foreach($folderfile in $folderfiles){
 
 
 ##############################
-# Update Services Permissions
+# Query Services Permissions
 ##############################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
