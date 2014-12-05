@@ -6,10 +6,12 @@
 # This script modifies the registry and several system access permissions. Use with caution!
 #
 # To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
+# Each section in the Execution Center at the bottom describes what permissions need to be set
 #
 # This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
-
-
+#
+# Windows Server 2003 is not supported using this script.  You can manually apply the appropriate permissions
+# using this script as a guide.
 
 <#
 	.SYNOPSIS
@@ -402,9 +404,11 @@ function send_event($message, $errortype){
 # Initialize user information
 $usersid = get_user_sid
 
-##############################
+###########################################################################################
 # Configure Namespace Security
-##############################
+# The least privileged user requires "Enable","MethodExecute","ReadSecurity","RemoteAccess"
+# permissions to the WMI namespaces listed below
+###########################################################################################
 # Root/CIMv2/Security/MicrosoftTpm  -->  OperatingSystem modeler - Win32_OperatingSystem
 # Root/RSOP/Computer  -->  OperatingSystem modeler - Win32_ComputerSystem
 
@@ -426,14 +430,17 @@ foreach ($namespace in $namespaces) {
     }
 }
 
-##############################
+###################################################
 # Configure RootSDDL for remote WinRM/WinRS access
-##############################
+# The least privileged user needs winrm access
+###################################################
 allow_access_to_winrm $usersid
 
-##############################
+##########################################################################################
 # Set Registry permissions
-##############################
+# The least privileged user needs ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues
+# permissions to the registry keys listed below
+##########################################################################################
 $registrykeys = @(
 	"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
 	"HKLM:\system\currentcontrolset\control\securepipeservers\winreg",
@@ -449,9 +456,10 @@ foreach ($registrykey in $registrykeys) {
 	set_registry_security $registrykey $userfqdn $registrykeyaccessmap
 }
 
-##############################
+####################################################################
 # Set Registry Security Descriptor Values
-##############################
+# The least privileged user needs the DCOM permissions listed below
+####################################################################
 $registryvaluekeys = @{
 	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
 	"MachineLaunchRestriction" = "HKLM:\software\microsoft\ole"
@@ -465,9 +473,10 @@ foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 $registrykeyvalueaccessmap = get_accessmask @("dcomremoteaccess")
 set_registry_sd_value "HKLM:\software\microsoft\ole" "DefaultAccessPermission" $usersid $registrykeyvalueaccessmap
 
-##############################
+########################################################################
 # Update local group permissions
-##############################
+# The least privileged user needs to be members of the following groups
+########################################################################
 $localgroups = @(
 	"Performance Monitor Users",
 	"Performance Log Users", 
@@ -480,9 +489,10 @@ foreach ($localgroup in $localgroups) {
 	add_user_to_group $localgroup
 }
 
-##############################
+#############################################################################
 # Modify Folder/File permissions
-##############################
+# The least privileged user needs readfolder access to the following folders
+#############################################################################
 
 $folderfiles = @(
 	"C:\Windows\system32\inetsrv\config"
@@ -497,9 +507,11 @@ foreach($folderfile in $folderfiles){
 }
 
 
-##############################
+###############################################################################################################################
 # Update Services Permissions
-##############################
+# The least privileged user needs "servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate"
+# permissions added to all services
+###############################################################################################################################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
 $serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
