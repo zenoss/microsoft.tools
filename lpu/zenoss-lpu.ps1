@@ -71,16 +71,16 @@ $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescri
 # Set account information
 
 if($login.contains("@")){
-    $arrlogin = $login.split("@")
-    $arrdomain = $arrlogin[1].split(".")
+	$arrlogin = $login.split("@")
+	$arrdomain = $arrlogin[1].split(".")
     $domain = $arrdomain[0]
     if ($arrdomain.Count -gt 2){
         for ($i = 1; $i -lt $arrdomain.Count-1; $i++) {
             $domain += "."+$arrdomain[$i]
         }
     }
-    $username = $arrlogin[0]
-    $userfqdn = $login
+	$username = $arrlogin[0]
+	$userfqdn = $login
 }
 else{
 	$domain = $env:COMPUTERNAME
@@ -324,7 +324,8 @@ function get_accessmask($permissions){
 		"genericwrite"			= 0x40000000;
 		"genericread"			= 0x80000000;
 		"listcontents"			= 0x00000004;
-		"readallprop"			= 0x00000010;
+        "dcomremoteaccess"      = 0x00000005;
+        "readallprop"			= 0x00000010;
 		"keyallaccess"			= 0xF003F;
 		"keyread"				= 0x20019;
 		"keywrite"				= 0x20006;
@@ -460,6 +461,9 @@ $registrykeyvalueaccessmap = get_accessmask @("listcontents", "readallprop")
 foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 	set_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
 }
+
+$registrykeyvalueaccessmap = get_accessmask @("dcomremoteaccess")
+set_registry_sd_value "HKLM:\software\microsoft\ole" "DefaultAccessPermission" $usersid $registrykeyvalueaccessmap
 
 ##############################
 # Update local group permissions
