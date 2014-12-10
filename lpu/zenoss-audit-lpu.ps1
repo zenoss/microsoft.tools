@@ -231,7 +231,7 @@ function test_access_to_winrm($usersid) {
     return $false
 }
 
-function get_accessmask($permission) {
+function get_accessmask_value($permission) {
 	$permTable = @{
 		"enable" 				= 1;
 		"methodexecute" 		= 2;
@@ -276,7 +276,7 @@ function get_accesslist($permissions){
 	$accessList = @()
 	foreach ($perm in $permissions) {
 		$perm = $perm.ToLower()
-        $accessmask = get_accessmask($perm)
+        $accessmask = get_accessmask_value($perm)
 		if($accessmask -ne $null){
 			$accessList += $accessmask
 		}
@@ -285,6 +285,26 @@ function get_accesslist($permissions){
 		}
 	}
 	return $accessList
+}
+
+function get_accessmask($permissions){
+	<#
+	$permissions = @("Enable","MethodExecute","ReadSecurity","RemoteAccess")
+	#>
+
+
+	$accessMask = 0
+	foreach ($perm in $permissions) {
+		$perm = $perm.ToLower()
+        $accessmask_value = get_accessmask_value($perm)
+		if($accessmask_value -ne $null){
+			$accessMask += $accessmask_value
+		}
+		else {
+		    throw "Unknown permission: $perm"
+		}
+	}
+	return $accessMask
 }
 
 function test_namespace_access($accessList, $namespaceParams){
