@@ -240,20 +240,26 @@ function load_sql_assembly(){
 
 
 function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
-	$objRegProperty = Get-ItemProperty $regkey -Name $property
-	$sddlstart = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
-	if($sddlstart.contains($usersid) -eq $False){
-		$newsddl = update_sddl $sddlstart $usersid $accessMask
-		$binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
-		Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
-		$message = "Registry security updated: $regkey"
-		send_event $message "Information"
-	}
-	else{
-		$message = "Value already contains permission for user $userfqdn"
-		write-output $message
-		send_event $message 'Information'
-	}
+	$objRegProperty = Get-ItemProperty $regkey -Name $property -ErrorAction silentlycontinue
+    if ($objRegProperty -ne $null) {
+        $sddlstart = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
+        if($sddlstart.contains($usersid) -eq $False){
+            $newsddl = update_sddl $sddlstart $usersid $accessMask
+            $binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
+            Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
+            $message = "Registry security updated: $regkey"
+            send_event $message "Information"
+        }
+        else{
+            $message = "Value already contains permission for user $userfqdn"
+            write-output $message
+            send_event $message 'Information'
+        }
+    }
+    else {
+        $message = "Property $property does not exist in registry key $regkey"
+        send_event $message
+    }
 
 	trap{
 		$message = "Registry Security Descriptor failed for $regkey"
