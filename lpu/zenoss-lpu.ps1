@@ -12,6 +12,13 @@
 #
 # Windows Server 2003 is not supported using this script.  You can manually apply the appropriate permissions
 # using this script as a guide.
+#
+#
+#########################################################################################
+#                                                                                       #
+#  WARNING: DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!          #
+#                                                                                       #
+#########################################################################################
 
 <#
 	.SYNOPSIS
@@ -76,11 +83,6 @@ if($login.contains("@")){
 	$arrlogin = $login.split("@")
 	$arrdomain = $arrlogin[1].split(".")
     $domain = $arrdomain[0]
-    if ($arrdomain.Count -gt 2){
-        for ($i = 1; $i -lt $arrdomain.Count-1; $i++) {
-            $domain += "."+$arrdomain[$i]
-        }
-    }
 	$username = $arrlogin[0]
 	$userfqdn = $login
 }
