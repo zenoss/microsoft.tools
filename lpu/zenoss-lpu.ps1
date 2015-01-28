@@ -16,7 +16,10 @@
 #
 #########################################################################################
 #                                                                                       #
-#  WARNING: DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!          #
+#  WARNINGS:                                                                            #
+#  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
+#  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT WILL RENDER THE  #
+#      SERVER INACCESSIBLE                                                              #
 #                                                                                       #
 #########################################################################################
 
@@ -66,6 +69,12 @@ param(
 #$login = 'zenny@zenoss.com'					# Domain Account
 #$login = 'benny'                               # Local Account
 
+$sysroot = $(get-childitem env:systemroot).value
+$hyperv = get-item $sysroot\system32\vmms.exe -ea silentlycontinue
+if ($hyperv -ne $null) {
+	write-host "Hyper-V detected.  Exiting"
+	exit
+}
 # The following values will be set at runtime. They are place holders here.
 $usersid
 
