@@ -43,7 +43,7 @@ function Enable-FirewallRule {
     }
 }
 
-<# Remove this and the final line of the script to enable execution
+#<# Remove this and the final line of the script to enable execution
 
 # Check to see if we're on domain or local
 $onDomain = $False
@@ -61,7 +61,7 @@ else {
 }
 
 # Run quickconfig.  This will return $False if there's a problem with winrm and we won't continue
-winrm qc -c
+winrm qc -q
 if ($? -ne $True) {
     exit
 }
@@ -108,4 +108,4 @@ else {
     netsh firewall add portopening TCP 5985 "HTTP"
     netsh firewall set service type = fileandprint mode = enable
 }
-Remove this line to execute. #>
+#Remove this line to execute. #>
