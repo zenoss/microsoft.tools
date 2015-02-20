@@ -19,7 +19,9 @@
 #  WARNINGS:                                                                            #
 #  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
 #  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT WILL RENDER THE  #
-#      SERVER INACCESSIBLE                                                              #
+#       SERVER INACCESSIBLE                                                             #
+#  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
+#       AUTHORITY ROLE IS PRESENT IN ACTIVE DIRECTORY                                   #
 #                                                                                       #
 #########################################################################################
 
@@ -476,6 +478,9 @@ foreach ($registrykey in $registrykeys) {
 ####################################################################
 # Set Registry Security Descriptor Values
 # The least privileged user needs the DCOM permissions listed below
+# Note:  If you are running a certificate authority, you should
+#           comment out this portion of the script and continue
+#           with group permissions.
 ####################################################################
 $registryvaluekeys = @{
 	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
