@@ -128,29 +128,21 @@ function get_user_sid($getuser=$userfqdn) {
 }
 
 function add_user_to_group($groupname) {
-	$objADSI = [ADSI]"WinNT://./$groupname,group"
-	$objADSIUser = [ADSI]"WinNT://$domain/$username"
-	$objMembers = @($objADSI.psbase.Invoke("Members"))
-	if($objMembers.Count -gt 0){
-		foreach ($objMember in $objMembers){
-			$membername = $objMember.GetType().InvokeMember("Name", 'GetProperty', $null, $objMember, $null)
-			if ($membername -ne $username){
-				$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
-			}
-		}
-	}
-	else {
-		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
-	}
-	$message = "User added to group: $groupname"
-	send_event $message 'Information'
-
-	trap{
-        $message = "Group does not exist: $groupname"
-	 	write-host $message
-	 	send_event $error[0] 'Error'
-	 	continue
- 	}
+    try
+    {
+        $objADSI = [ADSI]"WinNT://./$groupname,group"
+        $objADSIUser = [ADSI]"WinNT://$domain/$username"
+        [array]$objMembers = $objADSI.psbase.Invoke("Members")
+        $objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
+        $message = "User added to group: $groupname"
+        send_event $message 'Information'
+    }
+    catch
+    {
+        $message = "[$groupname] $($_.Exception.InnerException.Message)"
+        write-host $message send_event $error[0] 'Error'
+        continue
+    }
 }
 
 function add_user_to_service($service, $accessMask){
