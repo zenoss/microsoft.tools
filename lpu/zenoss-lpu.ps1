@@ -262,8 +262,8 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
         }
     }
     else {
-        $message = "Property $property does not exist in registry key $regkey"
-        send_event $message
+        $message = "Property $property does not exist in registry key $regkey.  Nothing to update."
+        write-host $message
     }
 
 	trap{
