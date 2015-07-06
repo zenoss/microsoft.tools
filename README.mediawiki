@@ -1,6 +1,6 @@
 == Least Privileged User ==
 
-Do not delete user without backing out changes made by the LPU script.
+Do not delete user without backing out changes made by the LPU script.  See lpu/zenoss-backup-lpu.ps1 for an example of saving existing permissions.
 
 The Least Privileged User requires the following privileges:
 
