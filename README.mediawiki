@@ -26,7 +26,7 @@ Permission is set on the following namespaces:
 * "Root/WMI"
 * "Root/CIMv2/Security/MicrosoftTpm"
 
-=== Winrm access ==
+=== Winrm access ===
 Access is given by through "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service\rootSDDL"
 
 To backup the sddl you could do something like the following:
@@ -34,7 +34,7 @@ To backup the sddl you could do something like the following:
     $sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
     $rootsddlkey = get-itemproperty $sddlkey -Name “rootSDDL”
 
-== ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues rights to specific registry keys ==
+=== ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues rights to specific registry keys ===
 
 To backup registry security you could do something like the following for each registry key
 
@@ -49,7 +49,7 @@ We need access to the following registry keys:
 * "HKLM:\Software\Wow6432Node\Microsoft\Microsoft SQL Server",
 * "HKLM:\Software\Microsoft\Microsoft SQL Server"
 
-== “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM. ==
+=== “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM. ===
 
 To backup for each registry property, you could do something like the following:
 
@@ -62,7 +62,7 @@ The permissions are set in the registry values:
 * “HKLM:\software\microsoft\ole\MachineLaunchRestriction”
 * If the value exists, “Remote Access” is set in “HKLM:\software\microsoft\ole\DefaultAccessPermission”
 
-== Membership in the following groups ==
+=== Membership in the following groups ===
 
 To remove users from a group, you could simply use a GPO.
 * "Performance Monitor Users",
@@ -71,14 +71,14 @@ To remove users from a group, you could simply use a GPO.
 * "Distributed COM Users", 
 * "WinRMRemoteWMIUsers__"
 
-== “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists ==
+=== “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists ===
 
 To backup the sddl
 
     $folderfileacl = (get-item $folderfile).getaccesscontrol("Access")
     $sddl = $folderfileacl.sddl
 
-== Service permissions ==
+=== Service permissions ===
 
 To backup a service sddl you could do something like the following on each service:
 
