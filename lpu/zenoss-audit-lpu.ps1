@@ -141,11 +141,15 @@ function is_user_in_service($service){
     $testuserperms = @('CC','LC','RP','LO','RC')
 	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
     $intersection = @('place','holder')
+    [regex]$re = '\w;;(\w+);.*'
     foreach ($sddlkey in $servicesddlstart.split('('))  {
         if ($sddlkey -match $usersid) {
-            $perms = [regex]::match($sddlkey, '\w;;(\w+);.*').Groups[1].value
-            $sddlperms = $perms -split '(.{2})' | ? {$_}
-            $intersection = $testuserperms | ?{$sddlperms -notcontains $_}
+            $match = $re.match($sddlkey)
+            if ($match.success -eq $true) {
+                $perms = $match.Groups[1].value
+                $sddlperms = $perms -split '(.{2})' | ? {$_}
+                $intersection = $testuserperms | ?{$sddlperms -notcontains $_}
+            }
         }
     }
 	return $intersection -eq $null
