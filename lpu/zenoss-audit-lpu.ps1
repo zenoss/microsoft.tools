@@ -85,6 +85,7 @@ else{
 	$domain = $env:COMPUTERNAME
 	$username = $login
 	$userfqdn = "{1}\{0}" -f $username, $domain
+    $domainuser = $userfqdn
 }
 
 # Prep event Log
@@ -137,21 +138,33 @@ function is_user_in_group($groupname) {
 }
 
 function is_user_in_service($service){
-    $testusersddl = "(A;;CCLCRPLORC;;;{0})" -f $usersid
+    $testuserperms = @('CC','LC','RP','LO','RC')
 	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
-	return $servicesddlstart.contains($testusersddl)
+    $intersection = @('place','holder')
+    [regex]$re = '\w;;(\w+);.*'
+    foreach ($sddlkey in $servicesddlstart.split('('))  {
+        if ($sddlkey -match $usersid) {
+            $match = $re.match($sddlkey)
+            if ($match.success -eq $true) {
+                $perms = $match.Groups[1].value
+                $sddlperms = $perms -split '(.{2})' | ? {$_}
+                $intersection = $testuserperms | ?{$sddlperms -notcontains $_}
+            }
+        }
+    }
+	return $intersection -eq $null
 }
 
 function test_folderfile($folderfile){
 	if(Test-Path $folderfile){
 		$folderfileacl = (get-item $folderfile).getaccesscontrol("Access")
         $folderfileaclstring = $folderfileacl.AccessToString
-        $testuser = "{0} Allow  ReadFolder" -f $domainuser
+        $testuser = "{0}\s+Allow\s+ReadFolder" -f $domainuser.replace('\', '\\')
         if ($_debug) {
             Write-Host "debug: `$testuser = $testuser"
             Write-Host "debug: `$folderfileacl = $folderfileacl"
         }
-        return $folderfileaclstring.Contains($testuser) 
+        return $folderfileaclstring -match $testuser
 	}
 
 	trap{
@@ -164,7 +177,7 @@ function test_folderfile($folderfile){
 
 function test_registry_security($regkey){
 	if(Test-Path $regkey){
-        $testuser = "{0} Allow  ReadKey" -f $domainuser
+        $testuser = "{0}\s+Allow\s+ReadKey" -f $domainuser.replace('\', '\\')
         if ($_debug) {
             Write-Host "debug: `$testuser = $testuser"
         }
@@ -173,12 +186,12 @@ function test_registry_security($regkey){
         if ($_debug) {
             Write-Host "debug:  `$regaclstring = $regaclstring"
         }
-        return $regaclstring.Contains($testuser) 
+        return $regaclstring -match $testuser
 	}
 
 	trap{
 
-		$message ="Registry key does not exists: $regkey"
+		$message ="Registry key does not exist: $regkey"
 		write-host $message
 		send_event $message 'Error'
 		continue
@@ -507,8 +520,7 @@ foreach($folderfile in $folderfiles){
 
 $services = get-wmiobject -query "Select * from Win32_Service"
 $serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
-Write-Host "`nTesting $userfqdn for access to services"
-#is_user_in_service 'SCMANAGER'
+Write-Host "`nTesting $userfqdn for access to services.  Some services are controlled by the system and permissions cannot be changed. `nFor example, the EFS service."
 foreach ($service in $services){
 	$svc_ret = is_user_in_service $service.name
     if ($svc_ret -eq $True) {
