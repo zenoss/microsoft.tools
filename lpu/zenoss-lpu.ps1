@@ -1,23 +1,29 @@
 #
-# Copyright 2014 Zenoss Inc., All rights reserved
+# Copyright 2015 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
 # This script modifies the registry and several system access permissions. Use with caution!
+#    Backup your settings before executing!
 #
 # To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
 # Each section in the Execution Center at the bottom describes what permissions need to be set
 #
+# Information:
 # This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
 #
 # Windows Server 2003 is not supported using this script.  You can manually apply the appropriate permissions
 # using this script as a guide.
 #
+# Some service permissions cannot be changed with this script.  The administrator does not have write object access
+# to system owned services such as EFS(Encrypted File Service) or gpsvc(Group Policy Client).
 #
 #########################################################################################
 #                                                                                       #
 #  WARNINGS:                                                                            #
 #  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
+#      Run zenoss-audit-lpu.ps1 to see which changes will be made and make a backup     #
+#      of your settings.                                                                #
 #  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT WILL RENDER THE  #
 #       SERVER INACCESSIBLE                                                             #
 #  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
@@ -150,7 +156,12 @@ function add_user_to_service($service, $accessMask){
 	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
-		$message = "User: $userfqdn added to service"
+        if ($ret[0] -match '.FAILED.') {
+            $reason = $ret[2]
+            $message = "User: $userfqdn was not added to service $service.`n`tReason:  $reason"
+        } else {
+            $message = "User: $userfqdn added to service $service."
+        }
 		send_event $message 'Information'
 	}
 	else{
@@ -262,8 +273,8 @@ function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
         }
     }
     else {
-        $message = "Property $property does not exist in registry key $regkey"
-        send_event $message
+        $message = "Property $property does not exist in registry key $regkey.  Nothing to update."
+        write-host $message
     }
 
 	trap{
@@ -376,6 +387,12 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
         throw "Failed to get security descriptor for namespace: $namespace"
     }
 	$objACL = $currentSecurityDescriptor.Descriptor
+    # check if user has permissions already
+    foreach ($acl in $objACL.DACL) {
+        if ($acl.Trustee.SIDString -eq $usersid) {
+            return $true
+        }
+    }
 
 	$objACE = (New-Object System.Management.ManagementClass("win32_Ace")).CreateInstance()
 	$objACE.AccessMask = $accessMask
