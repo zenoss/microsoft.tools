@@ -112,7 +112,7 @@ function get_user_sid($getuser=$userfqdn) {
 
 function add_user_to_service($service, $accessMask){
 	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
-	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
+	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true) -and ($servicesddlstart.contains("does not exist") -eq $false)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
         if ($ret[0] -match '.FAILED.') {
@@ -121,12 +121,12 @@ function add_user_to_service($service, $accessMask){
         } else {
             $message = "User: $userfqdn added to service $service."
         }
-		send_event $message
+		send_event $message "Information"
 	}
 	else{
 		$message = "Service $service already contains permission for user $userfqdn"
 		#write-output $message
-		send_event $message
+		send_event $message "Information"
 	}
 }
 
