@@ -8,10 +8,8 @@
 # This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
 #
 # This script must be run as the system account.  There are a handful of services that are owned
-# by the system account and permissions cannot be altered by the Administrator.  We default to these
-# services:  'DPS','EFS','gpsvc','idsvc','WdiServiceHost','WdiSystemHost'.  If you discover more
-# services whose permissions cannot be changed, add them to the @services array in the 
-# Execution Center at the end of this script.
+# by the system account and permissions cannot be altered by the Administrator.  The script will
+# apply the permissions to the services which do not have write access by the administrator.
 #
 # To run this as the system account, use the psexec.exe program to start a cmd shell, e.g. > psexec.exe -s cmd
 # PSExec can be found as part of Windows Sysinternals here: https://technet.microsoft.com/en-us/sysinternals/bb897553.aspx
@@ -37,13 +35,13 @@
     -f or -force to force an update to the service properties for the user.
     .EXAMPLE
 	Domain account
-	powershell -file "zenoss-lpu.ps1 -u zenny@zenoss.com"
+	powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com"
 	.EXAMPLE
 	Local account
-	powershell -file "zenoss-lpu.ps1 -u benny"
+	powershell -file "zenoss-system-services.ps1 -u benny"
     .EXAMPLE
     Update service permissions for domain account
-    powershell -file "zenoss-lpu.ps1 -u zenny@zenoss.com -force"
+    powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com -force"
 #>
 
 ########################################
@@ -87,8 +85,9 @@ else{
 }
 
 # Prep event Log
-if (![System.Diagnostics.EventLog]::SourceExists('Zenoss-LPU')){
-	New-EventLog -LogName Application -Source "Zenoss-LPU"
+$event_source = 'Zenoss-System-Services'
+if (![System.Diagnostics.EventLog]::SourceExists($event_source)){
+	New-EventLog -LogName Application -Source $event_source
 }
 
 ########################################
@@ -114,18 +113,13 @@ function add_user_to_service($service, $accessMask){
 	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
 	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true) -and ($servicesddlstart.contains("does not exist") -eq $false)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
-		$ret = CMD /C "sc sdset $service $servicesddlnew"
+		$ret = CMD /C "sc sdset `"$service`" $servicesddlnew"
         if ($ret[0] -match '.FAILED.') {
             $reason = $ret[2]
             $message = "User: $userfqdn was not added to service $service.`n`tReason:  $reason"
         } else {
             $message = "User: $userfqdn added to service $service."
         }
-		send_event $message "Information"
-	}
-	else{
-		$message = "Service $service already contains permission for user $userfqdn"
-		#write-output $message
 		send_event $message "Information"
 	}
 }
@@ -187,7 +181,7 @@ function get_accessmask($permissions){
 }
 
 function send_event($message, $errortype){
-	Write-EventLog -LogName Application -Source "Zenoss-LPU" -EntryType $errortype -EventId 1 -Message $message
+	Write-EventLog -LogName Application -Source $event_source -EntryType $errortype -EventId 1 -Message $message
 }
 
 ########################################
@@ -205,11 +199,11 @@ function send_event($message, $errortype){
 ###############################################################################################################################
 $usersid = get_user_sid
 
-$services = @('DPS','EFS','gpsvc','idsvc','WdiServiceHost','WdiSystemHost')
+$services = get-wmiobject -query "Select * from Win32_Service"
 $serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
 Write-Host 'accessmask='$serviceaccessmap
 foreach ($service in $services){
-	add_user_to_service $service $serviceaccessmap
+	add_user_to_service $service.Name $serviceaccessmap
 }
 
 Remove this line and the line just after the Execution Center section title to enable script. #> 

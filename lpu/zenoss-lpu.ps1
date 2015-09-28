@@ -1,10 +1,11 @@
+# BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #
 # Copyright 2015 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
 # This script modifies the registry and several system access permissions. Use with caution!
-#    Backup your settings before executing!
+#    BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #
 # To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
 # Each section in the Execution Center at the bottom describes what permissions need to be set
@@ -425,10 +426,11 @@ function send_event($message, $errortype){
 ########################################
 #  ------------------------------------
 #  -------- Execution Center ----------
+#  BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #  ------------------------------------
 ########################################
 
-<# Remove this line along with the last line of this file.
+<# By removing this line and the last line of the file you understand the risks associated with script execution.
 # Initialize user information
 $usersid = get_user_sid
 
@@ -558,4 +560,4 @@ foreach ($service in $services){
 $message = "Zenoss Resource Manager security permissions have been set for $userfqdn"
 write-output $message
 send_event $message 'Information'
-Remove this line and the line just after the Execution Center section title to enable script. #> 
+By removing this line and the line before Execution Center you understand the risks associated with script execution. #>
