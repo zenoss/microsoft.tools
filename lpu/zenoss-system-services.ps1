@@ -8,10 +8,8 @@
 # This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
 #
 # This script must be run as the system account.  There are a handful of services that are owned
-# by the system account and permissions cannot be altered by the Administrator.  We default to these
-# services:  'DPS','EFS','gpsvc','idsvc','WdiServiceHost','WdiSystemHost'.  If you discover more
-# services whose permissions cannot be changed, add them to the @services array in the 
-# Execution Center at the end of this script.
+# by the system account and permissions cannot be altered by the Administrator.  The script will
+# apply the permissions to the services which do not have write access by the administrator.
 #
 # To run this as the system account, use the psexec.exe program to start a cmd shell, e.g. > psexec.exe -s cmd
 # PSExec can be found as part of Windows Sysinternals here: https://technet.microsoft.com/en-us/sysinternals/bb897553.aspx
