@@ -37,13 +37,13 @@
     -f or -force to force an update to the service properties for the user.
     .EXAMPLE
 	Domain account
-	powershell -file "zenoss-lpu.ps1 -u zenny@zenoss.com"
+	powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com"
 	.EXAMPLE
 	Local account
-	powershell -file "zenoss-lpu.ps1 -u benny"
+	powershell -file "zenoss-system-services.ps1 -u benny"
     .EXAMPLE
     Update service permissions for domain account
-    powershell -file "zenoss-lpu.ps1 -u zenny@zenoss.com -force"
+    powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com -force"
 #>
 
 ########################################
@@ -87,8 +87,9 @@ else{
 }
 
 # Prep event Log
-if (![System.Diagnostics.EventLog]::SourceExists('Zenoss-LPU')){
-	New-EventLog -LogName Application -Source "Zenoss-LPU"
+$event_source = 'Zenoss-System-Services'
+if (![System.Diagnostics.EventLog]::SourceExists($event_source)){
+	New-EventLog -LogName Application -Source $event_source
 }
 
 ########################################
@@ -114,18 +115,13 @@ function add_user_to_service($service, $accessMask){
 	$servicesddlstart = [string](CMD /C "sc sdshow `"$service`"")
 	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true) -and ($servicesddlstart.contains("does not exist") -eq $false)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
-		$ret = CMD /C "sc sdset $service $servicesddlnew"
+		$ret = CMD /C "sc sdset `"$service`" $servicesddlnew"
         if ($ret[0] -match '.FAILED.') {
             $reason = $ret[2]
             $message = "User: $userfqdn was not added to service $service.`n`tReason:  $reason"
         } else {
             $message = "User: $userfqdn added to service $service."
         }
-		send_event $message "Information"
-	}
-	else{
-		$message = "Service $service already contains permission for user $userfqdn"
-		#write-output $message
 		send_event $message "Information"
 	}
 }
@@ -187,7 +183,7 @@ function get_accessmask($permissions){
 }
 
 function send_event($message, $errortype){
-	Write-EventLog -LogName Application -Source "Zenoss-LPU" -EntryType $errortype -EventId 1 -Message $message
+	Write-EventLog -LogName Application -Source $event_source -EntryType $errortype -EventId 1 -Message $message
 }
 
 ########################################
@@ -205,11 +201,11 @@ function send_event($message, $errortype){
 ###############################################################################################################################
 $usersid = get_user_sid
 
-$services = @('DPS','EFS','gpsvc','idsvc','WdiServiceHost','WdiSystemHost')
+$services = get-wmiobject -query "Select * from Win32_Service"
 $serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
 Write-Host 'accessmask='$serviceaccessmap
 foreach ($service in $services){
-	add_user_to_service $service $serviceaccessmap
+	add_user_to_service $service.Name $serviceaccessmap
 }
 
 Remove this line and the line just after the Execution Center section title to enable script. #> 

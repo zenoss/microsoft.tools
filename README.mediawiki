@@ -1,7 +1,8 @@
 == Least Privileged User ==
 
 Do not delete user without backing out changes made by the LPU script.  See lpu/zenoss-backup-lpu.ps1 for an example of saving existing permissions.
-Before running the LPU script, backup your settings.
+
+<u>'''Before running the LPU script, backup your settings!!!'''</u>
 
 The Least Privileged User requires the following privileges:
 
@@ -92,11 +93,11 @@ We assign the following permissions:
 * READ_CONTROL
 * SERVICE_START
 
-Some services are owned by the SYSTEM account and the permissions cannot be altered by the administrator.  In order to change the permissions on these services, you will need to run the zenoss-system-services.ps1 script as the system user.  
+Some services are owned by the SYSTEM account and the permissions cannot be altered by the administrator.  In order to change the permissions on these services, you will need to run the zenoss-system-services.ps1 script as the system user.
+
 * Use the PSExec sysinternals tool to open a cmd shell as the system account.
 
     psexec.exe -s cmd
 * You can then execute the powershell script to update the system owned service permissions.
 
     powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com"
-
