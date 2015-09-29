@@ -466,15 +466,19 @@ foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 # Validate local group permissions
 ##############################
 $localgroups = @(
-	"Performance Monitor Users",
-	"Performance Log Users", 
-	"Event Log Readers", 
-	"Distributed COM Users", 
+	"S-1-5-32-558",
+	"S-1-5-32-559",
+	"S-1-5-32-573",
+	"S-1-5-32-562",
 	"WinRMRemoteWMIUsers__"
 	)
 
 Write-Host "`nTesting $userfqdn for group membership"
 foreach ($localgroup in $localgroups) {
+    if ($localgroup.StartsWith('S-1-5-32-')) {
+        $GrObj = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList $localgroup;
+        $localgroup = $GrObj.Translate([System.Security.Principal.NTAccount]).Value.split('\')[1]
+    }
 	$grp_ret = is_user_in_group $localgroup
     if ($sd_ret -eq $True) {
         Write-Host "`tUser $userfqdn is a member of the $localgroup group"
