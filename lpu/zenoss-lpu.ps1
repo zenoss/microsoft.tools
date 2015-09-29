@@ -511,14 +511,18 @@ set_registry_sd_value "HKLM:\software\microsoft\ole" "DefaultAccessPermission" $
 # The least privileged user needs to be members of the following groups
 ########################################################################
 $localgroups = @(
-	"Performance Monitor Users",
-	"Performance Log Users", 
-	"Event Log Readers", 
-	"Distributed COM Users", 
+	"S-1-5-32-558",
+	"S-1-5-32-559",
+	"S-1-5-32-573",
+	"S-1-5-32-562",
 	"WinRMRemoteWMIUsers__"
 	)
 
 foreach ($localgroup in $localgroups) {
+    if ($localgroup.StartsWith('S-1-5-32-')) {
+        $GrObj = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList $localgroup;
+        $localgroup = $GrObj.Translate([System.Security.Principal.NTAccount]).Value.split('\')[1]
+    }
 	add_user_to_group $localgroup
 }
 
