@@ -43,7 +43,7 @@ function Enable-FirewallRule {
     }
 }
 
-#<# Remove this and the final line of the script to enable execution
+<# Remove this and the final line of the script to enable execution
 
 # Check to see if we're on domain or local
 $onDomain = $False
@@ -108,4 +108,16 @@ else {
     netsh firewall add portopening TCP 5985 "HTTP"
     netsh firewall set service type = fileandprint mode = enable
 }
-#Remove this line to execute. #>
+Remove this line to execute. #>
+
+#make a local groupif not exist
+
+$cn = [ADSI]"WinNT://$env:computername"
+$group = $cn.Create("Group","WinRMRemoteWMIUsers__")
+$group.setinfo()
+$group.description = "WinRMRemoteWMIUsers__"
+$group.SetInfo()
+
+
+#add a user to a local group
+net localgroup "WinRMRemoteWMIUsers__" "Whoever@tu.com"  /Add
