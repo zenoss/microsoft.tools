@@ -84,6 +84,16 @@ if ($hyperv -ne $null) {
 	write-host "Hyper-V detected.  Exiting"
 	exit
 }
+
+if (Test-Path HKLM:\SOFTWARE\zenoss){
+    Write-host "Script has already run, exiting"
+    return
+
+}else{
+    Write-host "Script hasn't run, proceeding..."
+
+}
+
 # The following values will be set at runtime. They are place holders here.
 $usersid
 
@@ -565,3 +575,7 @@ $message = "Zenoss Resource Manager security permissions have been set for $user
 write-output $message
 send_event $message 'Information'
 By removing this line and the line before Execution Center you understand the risks associated with script execution. #>
+
+#Tattoo the registry
+md HKLM:\SOFTWARE\zenoss
+New-ItemProperty HKLM:\SOFTWARE\zenoss -name 'LoginScript' -Value "1"
