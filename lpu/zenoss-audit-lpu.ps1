@@ -8,7 +8,7 @@
 # This script will query WMI namespace security, remote winrm/winrs access, registry permissions,
 # group membership, folder/file permissions, and service permissions.  The point is to determine
 # if a given user will be able to access information needed to model/monitor a Windows server.
-# This script does not make any changes to the system.  It will issue events.  But, as with any script, 
+# This script does not make any changes to the system.  It will issue events.  But, as with any script,
 # read thoroughly and use with caution.
 #
 
@@ -26,7 +26,7 @@
 	zenoss-audit-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
 	Local account
-	zenoss-audit-lpu.ps1 -u benny 
+	zenoss-audit-lpu.ps1 -u benny
 #>
 
 ########################################
@@ -119,7 +119,8 @@ function is_user_in_group($groupname) {
 	if($objMembers.Count -gt 0){
 		foreach ($objMember in $objMembers){
 			$membername = $objMember.GetType().InvokeMember("Name", 'GetProperty', $null, $objMember, $null)
-			if ($membername -eq $username){
+            $membersid = get_user_sid $membername
+            if ($membersid -eq $usersid){
 				return $True
 			}
 		}

@@ -1,8 +1,10 @@
 == Least Privileged User ==
 
+This README documents what permissions are needed to monitor a Windows server by a non-administrative user.  These changes are automated using the lpu/zenoss-lpu.ps1 powershell script.  This script is only meant for member servers.
+
 Do not delete user without backing out changes made by the LPU script.  See lpu/zenoss-backup-lpu.ps1 for an example of saving existing permissions.
 
-<u>'''Before running the LPU script, backup your settings!!!'''</u>
+<u>'''Before running the LPU script, you should backup your settings.'''</u>
 
 The Least Privileged User requires the following privileges:
 
@@ -43,7 +45,7 @@ To backup registry security you could do something like the following for each r
     $regacl = (get-item $regkey).getaccesscontrol("Access")
     $regsddl = $regacl.sddl
 
-We need access to the following registry keys:
+Zenoss needs access to the following registry keys:
 * "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
 * "HKLM:\system\currentcontrolset\control\securepipeservers\winreg",
 * "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}",
@@ -53,7 +55,7 @@ We need access to the following registry keys:
 
 === “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM. ===
 
-To backup for each registry property, you could do something like the following:
+To backup settings for each registry property, you could do something like the following:
 
     $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
     $objRegProperty = Get-ItemProperty $regkey -Name $property
@@ -93,7 +95,7 @@ We assign the following permissions:
 * READ_CONTROL
 * SERVICE_START
 
-Some services are owned by the SYSTEM account and the permissions cannot be altered by the administrator.  In order to change the permissions on these services, you will need to run the zenoss-system-services.ps1 script as the system user.
+Some services are owned by the SYSTEM account and the permissions cannot be altered by the administrator.  In order to change the permissions on these services, you will need to run the zenoss-system-services.ps1 script as the SYSTEM user.
 
 * Use the PSExec sysinternals tool to open a cmd shell as the system account.
 
