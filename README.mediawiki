@@ -1,6 +1,6 @@
 == Least Privileged User ==
 
-This README documents what permissions are needed to monitor a Windows server by a non-administrative user.  These changes are automated using the lpu/zenoss-lpu.ps1 powershell script.  This script is only meant for member servers.
+This README documents what permissions are needed to monitor a Windows server by a non-administrative user.  These changes are automated using the lpu/zenoss-lpu.ps1 powershell script.  This script is known to work for Windows 2008 and 2012 member servers.  To enable the LPU for a Domain Controller, one will need to run the script and also manually add the user to the Domain level security groups listed below.
 
 Do not delete user without backing out changes made by the LPU script.  See lpu/zenoss-backup-lpu.ps1 for an example of saving existing permissions.
 
@@ -69,6 +69,8 @@ The permissions are set in the registry values:
 === Membership in the following groups ===
 
 To remove users from a group, you could simply use a GPO.
+
+The following groups are either local to a server or are at the domain level.
 * "Performance Monitor Users",
 * "Performance Log Users", 
 * "Event Log Readers", 
