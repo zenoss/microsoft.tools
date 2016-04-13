@@ -1,6 +1,6 @@
 # BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #
-# Copyright 2015 Zenoss Inc., All rights reserved
+# Copyright 2016 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
@@ -19,13 +19,17 @@
 # Some service permissions cannot be changed with this script.  The administrator does not have write object access
 # to system owned services such as EFS(Encrypted File Service) or gpsvc(Group Policy Client).
 #
+# This script has been tested on simple Domain Controllers successfully.  The user must be
+# manually added to the necessary domain security groups.  The user account will need to
+# be logged off to pick up the new settings or have the kerberos ticket granting ticket destroyed.
+#
 #########################################################################################
 #                                                                                       #
 #  WARNINGS:                                                                            #
 #  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
 #      Run zenoss-audit-lpu.ps1 to see which changes will be made and make a backup     #
 #      of your settings.                                                                #
-#  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT WILL RENDER THE  #
+#  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT MAY RENDER THE   #
 #       SERVER INACCESSIBLE                                                             #
 #  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
 #       AUTHORITY ROLE IS PRESENT IN ACTIVE DIRECTORY                                   #
@@ -509,6 +513,12 @@ set_registry_sd_value "HKLM:\software\microsoft\ole" "DefaultAccessPermission" $
 ########################################################################
 # Update local group permissions
 # The least privileged user needs to be members of the following groups
+# For a domain controller, manually add the user to the domain groups
+#    "Performance Monitor Users",
+#    "Performance Log Users",
+#    "Event Log Readers",
+#    "Distributed COM Users",
+#    "WinRMRemoteWMIUsers__"
 ########################################################################
 $localgroups = @(
 	"S-1-5-32-558",
