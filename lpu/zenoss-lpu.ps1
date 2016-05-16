@@ -507,9 +507,6 @@ foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
 	set_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
 }
 
-$registrykeyvalueaccessmap = get_accessmask @("dcomremoteaccess")
-set_registry_sd_value "HKLM:\software\microsoft\ole" "DefaultAccessPermission" $usersid $registrykeyvalueaccessmap
-
 ########################################################################
 # Update local group permissions
 # The least privileged user needs to be members of the following groups
@@ -566,6 +563,15 @@ add_user_to_service 'SCMANAGER' $serviceaccessmap
 foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
 }
+
+#############################################################################
+# Restart winrm/winmgmt services
+# Permissions are not usually picked up until a restart is performed
+#############################################################################
+
+write-host 'Restarting winmgmt and winrm services...'
+get-service winmgmt | restart-service -force
+get-service winrm | restart-service -force
 
 ##############################
 # Message Center
