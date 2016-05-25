@@ -29,8 +29,6 @@
 #  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
 #      Run zenoss-audit-lpu.ps1 to see which changes will be made and make a backup     #
 #      of your settings.                                                                #
-#  DO NOT RUN THIS SCRIPT ON A WINDOWS SERVER WITH A HYPER-V ROLE.  IT MAY RENDER THE   #
-#       SERVER INACCESSIBLE                                                             #
 #  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
 #       AUTHORITY ROLE IS PRESENT IN ACTIVE DIRECTORY                                   #
 #                                                                                       #
@@ -82,12 +80,6 @@ param(
 #$login = 'zenny@zenoss.com'					# Domain Account
 #$login = 'benny'                               # Local Account
 
-$sysroot = $(get-childitem env:systemroot).value
-$hyperv = get-item $sysroot\system32\vmms.exe -ea silentlycontinue
-if ($hyperv -ne $null) {
-	write-host "Hyper-V detected.  Exiting"
-	exit
-}
 # The following values will be set at runtime. They are place holders here.
 $usersid
 
