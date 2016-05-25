@@ -1,10 +1,11 @@
 /*
-Copyright 2014 Zenoss Inc., All rights reserved
+Copyright 2016 Zenoss Inc., All rights reserved
 
 DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 This script modifies the registry and several system access permissions. Use with caution!
 
 You must set the LPUuser variable before script will execute.
+To use a schema other than dbo, set the Schema variable.
 
 example:
 
@@ -18,7 +19,9 @@ required access areas. If you are using a local SQL account you must create that
 */
 
 DECLARE @LPUuser VARCHAR(50)
+DECLARE @Schema VARCHAR(50)
 SET @LPUuser = 'DOMAIN\USER'
+SET @Schema = 'dbo'
 
 BEGIN TRY
     IF NOT EXISTS
@@ -40,6 +43,12 @@ BEGIN TRY
         PRINT
             'The Zenoss user was already created so necessary permissions were granted.'
     END
+    DECLARE @command varchar(1000)
+    SELECT @command = 'use ? CREATE USER ['+@LPUuser+'] FOR LOGIN ['+@LPUuser+']'
+    EXEC sp_MSforeachdb @command
+
+    SELECT @command = 'ALTER USER ['+@LPUuser+'] WITH DEFAULT_SCHEMA=['+@Schema+']'
+    EXEC sp_MSforeachdb @command
 END TRY
 BEGIN CATCH
     SELECT
