@@ -482,23 +482,6 @@ foreach ($registrykey in $registrykeys) {
 	set_registry_security $registrykey $userfqdn $registrykeyaccessmap
 }
 
-####################################################################
-# Set Registry Security Descriptor Values
-# The least privileged user needs the DCOM permissions listed below
-# Note:  If you are running a certificate authority, you should
-#           comment out this portion of the script and continue
-#           with group permissions.
-####################################################################
-$registryvaluekeys = @{
-	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
-	"MachineLaunchRestriction" = "HKLM:\software\microsoft\ole"
-}
-
-$registrykeyvalueaccessmap = get_accessmask @("listcontents", "readallprop")
-foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
-	set_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
-}
-
 ########################################################################
 # Update local group permissions
 # The least privileged user needs to be members of the following groups
