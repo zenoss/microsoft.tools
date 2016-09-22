@@ -11,7 +11,6 @@ The Least Privileged User requires the following privileges:
 * WMI namespace security(Enable, Method Execute, Read Security, Remote Access)
 * Winrm access
 * ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues rights to several registry keys
-* “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM.
 * Membership in local groups
 * “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists
 * Service permissions
@@ -52,19 +51,6 @@ Zenoss needs access to the following registry keys:
 * "HKLM:\SYSTEM\CurrentControlSet\Services\Blfp\Parameters\Adapters",
 * "HKLM:\Software\Wow6432Node\Microsoft\Microsoft SQL Server",
 * "HKLM:\Software\Microsoft\Microsoft SQL Server"
-
-=== “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM. ===
-
-To backup settings for each registry property, you could do something like the following:
-
-    $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
-    $objRegProperty = Get-ItemProperty $regkey -Name $property
-    $sddl = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
-
-The permissions are set in the registry values:
-* “HKLM:\software\microsoft\ole\MachineAccessRestriction”
-* “HKLM:\software\microsoft\ole\MachineLaunchRestriction”
-* If the value exists, “Remote Access” is set in “HKLM:\software\microsoft\ole\DefaultAccessPermission”
 
 === Membership in the following groups ===
 
