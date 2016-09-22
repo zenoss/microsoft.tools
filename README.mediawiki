@@ -1,0 +1,107 @@
+== Least Privileged User ==
+
+This README documents what permissions are needed to monitor a Windows server by a non-administrative user.  These changes are automated using the lpu/zenoss-lpu.ps1 powershell script.  This script is known to work for Windows 2008 and 2012 member servers.  To enable the LPU for a Domain Controller, one will need to run the script and also manually add the user to the Domain level security groups listed below.
+
+Do not delete user without backing out changes made by the LPU script.  See lpu/zenoss-backup-lpu.ps1 for an example of saving existing permissions.
+
+<u>'''Before running the LPU script, you should backup your settings.'''</u>
+
+The Least Privileged User requires the following privileges:
+
+* WMI namespace security(Enable, Method Execute, Read Security, Remote Access)
+* Winrm access
+* ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues rights to several registry keys
+* “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM.
+* Membership in local groups
+* “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists
+* Service permissions
+
+=== WMI namespace security(Enable, Method Execute, Read Security, Remote Access) ===
+Added by invoking the SetSecurityDescriptor method
+
+See http://blogs.msdn.com/b/spatdsg/archive/2007/11/21/set-wmi-namespace-security-via-gpo-script.aspx for information on using GetSD to backup the Security Descriptor for each namespace
+
+Permission is set on the following namespaces:
+* "Root"
+* "Root/CIMv2"
+* "Root/DEFAULT"
+* "Root/RSOP"
+* "Root/RSOP/Computer"
+* "Root/WMI"
+* "Root/CIMv2/Security/MicrosoftTpm"
+
+=== Winrm access ===
+Access is given by through "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service\rootSDDL"
+
+To backup the sddl you could do something like the following:
+
+    $sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
+    $rootsddlkey = get-itemproperty $sddlkey -Name “rootSDDL”
+
+=== ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues rights to specific registry keys ===
+
+To backup registry security you could do something like the following for each registry key
+
+    $regacl = (get-item $regkey).getaccesscontrol("Access")
+    $regsddl = $regacl.sddl
+
+Zenoss needs access to the following registry keys:
+* "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
+* "HKLM:\system\currentcontrolset\control\securepipeservers\winreg",
+* "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}",
+* "HKLM:\SYSTEM\CurrentControlSet\Services\Blfp\Parameters\Adapters",
+* "HKLM:\Software\Wow6432Node\Microsoft\Microsoft SQL Server",
+* "HKLM:\Software\Microsoft\Microsoft SQL Server"
+
+=== “List Contents” and “Read all Properties” permissions in the Machine Access and Launch Restrictions of DCOM. ===
+
+To backup settings for each registry property, you could do something like the following:
+
+    $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
+    $objRegProperty = Get-ItemProperty $regkey -Name $property
+    $sddl = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
+
+The permissions are set in the registry values:
+* “HKLM:\software\microsoft\ole\MachineAccessRestriction”
+* “HKLM:\software\microsoft\ole\MachineLaunchRestriction”
+* If the value exists, “Remote Access” is set in “HKLM:\software\microsoft\ole\DefaultAccessPermission”
+
+=== Membership in the following groups ===
+
+To remove users from a group, you could simply use a GPO.
+
+The following groups are either local to a server or are at the domain level.
+* "Performance Monitor Users",
+* "Performance Log Users", 
+* "Event Log Readers", 
+* "Distributed COM Users", 
+* "WinRMRemoteWMIUsers__"
+
+=== “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists ===
+
+To backup the sddl
+
+    $folderfileacl = (get-item $folderfile).getaccesscontrol("Access")
+    $sddl = $folderfileacl.sddl
+
+=== Service permissions ===
+
+To backup a service sddl you could do something like the following on each service:
+
+    $servicesddl = [string](CMD /C "sc sdshow `"$service`"")
+
+We assign the following permissions:
+* SERVICE_QUERY_CONFIG
+* SERVICE_QUERY_STATUS 
+* SERVICE_INTERROGATE 
+* READ_CONTROL
+* SERVICE_START
+
+Some services are owned by the SYSTEM account and the permissions cannot be altered by the administrator.  In order to change the permissions on these services, you will need to run the zenoss-system-services.ps1 script as the SYSTEM user.
+
+* Use the PSExec sysinternals tool to open a cmd shell as the system account.
+
+    psexec.exe -s cmd
+* You can then execute the powershell script to update the system owned service permissions.
+
+    powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com"

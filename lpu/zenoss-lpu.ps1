@@ -1,27 +1,57 @@
+# BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #
-# Copyright 2014 Zenoss Inc., All rights reserved
+# Copyright 2016 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
 # This script modifies the registry and several system access permissions. Use with caution!
+#    BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #
 # To make sure you understand this you'll need to uncomment out the section at the bottom of the script before you can use it.
-
-
-
+# Each section in the Execution Center at the bottom describes what permissions need to be set
+#
+# Information:
+# This script is not intended for Clusters.  Monitoring a cluster requires local administrator access
+#
+# Windows Server 2003 is not supported using this script.  You can manually apply the appropriate permissions
+# using this script as a guide.
+#
+# Some service permissions cannot be changed with this script.  The administrator does not have write object access
+# to system owned services such as EFS(Encrypted File Service) or gpsvc(Group Policy Client).
+#
+# This script has been tested on simple Domain Controllers successfully.  The user must be
+# manually added to the necessary domain security groups.  The user account will need to
+# be logged off to pick up the new settings or have the kerberos ticket granting ticket destroyed.
+#
+#########################################################################################
+#                                                                                       #
+#  WARNINGS:                                                                            #
+#  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
+#      Run zenoss-audit-lpu.ps1 to see which changes will be made and make a backup     #
+#      of your settings.                                                                #
+#  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
+#       AUTHORITY ROLE IS PRESENT IN ACTIVE DIRECTORY                                   #
+#                                                                                       #
+#########################################################################################
 
 <#
 	.SYNOPSIS
 	Configure local system permissions to support least privilege user access for Zenoss Resource Manager monitoring.
 	.DESCRIPTION
-	Need to add some more info here 
-	.EXAMPLE
+	This script configures system permissions to allow a least privileged user access to WMI namespaces, service querying,
+    WinRM/WinRS access, registry keys, local groups, and specific folder/file permissions.
+    .INPUT
+    -u or -user to specify the user name.  Enter just the user name for a local user and user@domain.com for a domain user.
+    -f or -force to force an update to the service properties for the user.
+    .EXAMPLE
 	Domain account
 	zenoss-lpu.ps1 -u zenny@zenoss.com
 	.EXAMPLE
 	Local account
 	zenoss-lpu.ps1 -u benny 
-
+    .EXAMPLE
+    Update service permissions for domain account
+    zenoss-lpu.ps1 -u zenny@zenoss.com -force
 #>
 
 ########################################
@@ -36,7 +66,7 @@ param(
 	[string]
 	$login = 'benny',
 	[Alias('force','f')]
-	[bool]
+	[switch]
 	$force_update = $false
 	)
 
@@ -66,7 +96,7 @@ $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescri
 if($login.contains("@")){
 	$arrlogin = $login.split("@")
 	$arrdomain = $arrlogin[1].split(".")
-	$domain = $arrdomain[0]
+    $domain = $arrdomain[0]
 	$username = $arrlogin[0]
 	$userfqdn = $login
 }
@@ -101,29 +131,21 @@ function get_user_sid($getuser=$userfqdn) {
 }
 
 function add_user_to_group($groupname) {
-	$objADSI = [ADSI]"WinNT://./$groupname,group"
-	$objADSIUser = [ADSI]"WinNT://$domain/$username"
-	$objMembers = @($objADSI.psbase.Invoke("Members"))
-	if($objMembers.Count -gt 0){
-		foreach ($objMember in $objMembers){
-			$membername = $objMember.GetType().InvokeMember("Name", 'GetProperty', $null, $objMember, $null)
-			if ($membername -ne $username){
-				$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
-			}
-		}
-	}
-	else {
-		$objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
-	}
-	$message = "User added to group: $groupname"
-	send_event $message 'Information'
-
-	trap{
-        $message = "Group does not exist: $groupname"
-	 	write-host $message
-	 	send_event $error[0] 'Error'
-	 	continue
- 	}
+    try
+    {
+        $objADSI = [ADSI]"WinNT://./$groupname,group"
+        $objADSIUser = [ADSI]"WinNT://$domain/$username"
+        [array]$objMembers = $objADSI.psbase.Invoke("Members")
+        $objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
+        $message = "User added to group: $groupname"
+        send_event $message 'Information'
+    }
+    catch
+    {
+        $message = "[$groupname] $($_.Exception.InnerException.Message)"
+        write-host $message send_event $error[0] 'Error'
+        continue
+    }
 }
 
 function add_user_to_service($service, $accessMask){
@@ -131,7 +153,12 @@ function add_user_to_service($service, $accessMask){
 	if(($servicesddlstart.contains($usersid) -eq $False) -or ($force_update -eq $true)){
 		$servicesddlnew = update_sddl $servicesddlstart $usersid $accessMask
 		$ret = CMD /C "sc sdset $service $servicesddlnew"
-		$message = "User: $userfqdn added to service"
+        if ($ret[0] -match '.FAILED.') {
+            $reason = $ret[2]
+            $message = "User: $userfqdn was not added to service $service.`n`tReason:  $reason"
+        } else {
+            $message = "User: $userfqdn added to service $service."
+        }
 		send_event $message 'Information'
 	}
 	else{
@@ -226,20 +253,26 @@ function load_sql_assembly(){
 
 
 function set_registry_sd_value($regkey, $property, $usersid, $accessMask){
-	$objRegProperty = Get-ItemProperty $regkey -Name $property
-	$sddlstart = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
-	if($sddlstart.contains($usersid) -eq $False){
-		$newsddl = update_sddl $sddlstart $usersid $accessMask
-		$binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
-		Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
-		$message = "Registry security updated: $regkey"
-		send_event $message "Information"
-	}
-	else{
-		$message = "Value already contains permission for user $userfqdn"
-		write-output $message
-		send_event $message 'Information'
-	}
+	$objRegProperty = Get-ItemProperty $regkey -Name $property -ErrorAction silentlycontinue
+    if ($objRegProperty -ne $null) {
+        $sddlstart = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
+        if($sddlstart.contains($usersid) -eq $False){
+            $newsddl = update_sddl $sddlstart $usersid $accessMask
+            $binarySDDL = $objSDHelper.SDDLToBinarySD($newsddl)
+            Set-ItemProperty $regkey -Name $property -Value $binarySDDL.BinarySD
+            $message = "Registry security updated: $regkey"
+            send_event $message "Information"
+        }
+        else{
+            $message = "Value already contains permission for user $userfqdn"
+            write-output $message
+            send_event $message 'Information'
+        }
+    }
+    else {
+        $message = "Property $property does not exist in registry key $regkey.  Nothing to update."
+        write-host $message
+    }
 
 	trap{
 		$message = "Registry Security Descriptor failed for $regkey"
@@ -312,7 +345,8 @@ function get_accessmask($permissions){
 		"genericwrite"			= 0x40000000;
 		"genericread"			= 0x80000000;
 		"listcontents"			= 0x00000004;
-		"readallprop"			= 0x00000010;
+        "dcomremoteaccess"      = 0x00000005;
+        "readallprop"			= 0x00000010;
 		"keyallaccess"			= 0xF003F;
 		"keyread"				= 0x20019;
 		"keywrite"				= 0x20006;
@@ -350,6 +384,12 @@ function add_ace_to_namespace($accessMask, $namespaceParams){
         throw "Failed to get security descriptor for namespace: $namespace"
     }
 	$objACL = $currentSecurityDescriptor.Descriptor
+    # check if user has permissions already
+    foreach ($acl in $objACL.DACL) {
+        if ($acl.Trustee.SIDString -eq $usersid) {
+            return $true
+        }
+    }
 
 	$objACE = (New-Object System.Management.ManagementClass("win32_Ace")).CreateInstance()
 	$objACE.AccessMask = $accessMask
@@ -382,16 +422,19 @@ function send_event($message, $errortype){
 ########################################
 #  ------------------------------------
 #  -------- Execution Center ----------
+#  BACKUP YOUR SETTINGS BEFORE EXECUTING!
 #  ------------------------------------
 ########################################
 
-<# Remove this line along with the last line of this file.
+<# By removing this line and the last line of the file you understand the risks associated with script execution.
 # Initialize user information
 $usersid = get_user_sid
 
-##############################
+###########################################################################################
 # Configure Namespace Security
-##############################
+# The least privileged user requires "Enable","MethodExecute","ReadSecurity","RemoteAccess"
+# permissions to the WMI namespaces listed below
+###########################################################################################
 # Root/CIMv2/Security/MicrosoftTpm  -->  OperatingSystem modeler - Win32_OperatingSystem
 # Root/RSOP/Computer  -->  OperatingSystem modeler - Win32_ComputerSystem
 
@@ -413,14 +456,17 @@ foreach ($namespace in $namespaces) {
     }
 }
 
-##############################
+###################################################
 # Configure RootSDDL for remote WinRM/WinRS access
-##############################
+# The least privileged user needs winrm access
+###################################################
 allow_access_to_winrm $usersid
 
-##############################
+##########################################################################################
 # Set Registry permissions
-##############################
+# The least privileged user needs ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues
+# permissions to the registry keys listed below
+##########################################################################################
 $registrykeys = @(
 	"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
 	"HKLM:\system\currentcontrolset\control\securepipeservers\winreg",
@@ -436,37 +482,36 @@ foreach ($registrykey in $registrykeys) {
 	set_registry_security $registrykey $userfqdn $registrykeyaccessmap
 }
 
-##############################
-# Set Registry Security Descriptor Values
-##############################
-$registryvaluekeys = @{
-	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
-	"MachineLaunchRestriction" = "HKLM:\software\microsoft\ole"
-}
-
-$registrykeyvalueaccessmap = get_accessmask @("listcontents", "readallprop")
-foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
-	set_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
-}
-
-##############################
+########################################################################
 # Update local group permissions
-##############################
+# The least privileged user needs to be members of the following groups
+# For a domain controller, manually add the user to the domain groups
+#    "Performance Monitor Users",
+#    "Performance Log Users",
+#    "Event Log Readers",
+#    "Distributed COM Users",
+#    "WinRMRemoteWMIUsers__"
+########################################################################
 $localgroups = @(
-	"Performance Monitor Users",
-	"Performance Log Users", 
-	"Event Log Readers", 
-	"Distributed COM Users", 
+	"S-1-5-32-558",
+	"S-1-5-32-559",
+	"S-1-5-32-573",
+	"S-1-5-32-562",
 	"WinRMRemoteWMIUsers__"
 	)
 
 foreach ($localgroup in $localgroups) {
+    if ($localgroup.StartsWith('S-1-5-32-')) {
+        $GrObj = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList $localgroup;
+        $localgroup = $GrObj.Translate([System.Security.Principal.NTAccount]).Value.split('\')[1]
+    }
 	add_user_to_group $localgroup
 }
 
-##############################
+#############################################################################
 # Modify Folder/File permissions
-##############################
+# The least privileged user needs readfolder access to the following folders
+#############################################################################
 
 $folderfiles = @(
 	"C:\Windows\system32\inetsrv\config"
@@ -481,9 +526,11 @@ foreach($folderfile in $folderfiles){
 }
 
 
-##############################
+###############################################################################################################################
 # Update Services Permissions
-##############################
+# The least privileged user needs "servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate"
+# permissions added to all services
+###############################################################################################################################
 
 $services = get-wmiobject -query "Select * from Win32_Service"
 $serviceaccessmap = get_accessmask @("servicequeryconfig","servicequeryservice","readallprop","readsecurity","serviceinterrogate")
@@ -492,6 +539,15 @@ foreach ($service in $services){
 	add_user_to_service $service.name $serviceaccessmap
 }
 
+#############################################################################
+# Restart winrm/winmgmt services
+# Permissions are not usually picked up until a restart is performed
+#############################################################################
+
+write-host 'Restarting winmgmt and winrm services...'
+get-service winmgmt | restart-service -force
+get-service winrm | restart-service -force
+
 ##############################
 # Message Center
 ##############################
@@ -499,4 +555,4 @@ foreach ($service in $services){
 $message = "Zenoss Resource Manager security permissions have been set for $userfqdn"
 write-output $message
 send_event $message 'Information'
-Remove this line and the line just after the Execution Center section title to enable script. #> 
+By removing this line and the line before Execution Center you understand the risks associated with script execution. #>
