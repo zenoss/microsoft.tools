@@ -1,5 +1,5 @@
 #
-# Copyright 2014 Zenoss Inc., All rights reserved
+# Copyright 2014, 2017 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
@@ -436,31 +436,6 @@ foreach ($registrykey in $registrykeys) {
     else {
         Write-Host "`tRegistry key $registrykey does not exist on this system"
     }
-}
-
-##############################
-# Validate Registry Security Descriptor Values
-##############################
-$registryvaluekeys = @{
-	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
-	"MachineLaunchRestriction" = "HKLM:\software\microsoft\ole"
-}
-
-Write-Host "`nTesting $userfqdn for `"List contents`" and `"Read all Properties`" access to HKLM:\software\microsoft\ole"
-$registrykeyvalueaccessmap = get_accessmask @("listcontents", "readallprop")
-foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
-	#set_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
-	$sd_ret = test_registry_sd_value $registryvaluekey.Value $registryvaluekey.Name $usersid $registrykeyvalueaccessmap
-    if ($sd_ret -eq $True) {
-        Write-Host "`tUser $userfqdn has $($registryvaluekey.Name) access to $($registryvaluekey.Value)"
-    }
-    elseif ($sd_ret -eq $false) {
-        Write-Host "`tUser $userfqdn requires $($registryvaluekey.Name) access to $($registryvaluekey.Value)"
-    }
-    else {
-        Write-Host "`tError accessing $($registryvaluekey.Value)"
-    }
-
 }
 
 ##############################

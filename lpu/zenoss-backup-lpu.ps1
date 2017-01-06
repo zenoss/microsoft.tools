@@ -1,5 +1,5 @@
 #
-# Copyright 2015 Zenoss Inc., All rights reserved
+# Copyright 2015, 2017 Zenoss Inc., All rights reserved
 #
 # DISCLAIMER: USE THE SOFTWARE AT YOUR OWN RISK
 #
@@ -11,7 +11,6 @@
 # captured in a text file and reapplied if the LPU is removed.
 #
 #    * WinRM Access
-#    * DCOM Permissions
 #    * Registry Permissions
 #    * Folder/File Permissions
 #    * Service Permissions
@@ -33,16 +32,6 @@ function backup_registry_sddl($regkey){
     if ($regaclitem -ne $null) {
         $sddl = $regaclitem.getaccesscontrol("Access").sddl
         $output = "{0}:  {1}" -f $regkey,$sddl
-        Write-Output $output
-    }
-}
-
-function backup_dcom_permissions($regkey, $property) {
-    $objSDHelper = New-Object System.Management.ManagementClass Win32_SecurityDescriptorHelper
-    $objRegProperty = Get-ItemProperty $regkey -Name $property -ea SilentlyContinue
-    if ($objRegProperty -ne $null) {
-        $sddl = [string]($objSDHelper.BinarySDToSDDL($objRegProperty.$property)).SDDL
-        $output = "{0}:{1}:  {2}" -f $regkey,$property,$sddl
         Write-Output $output
     }
 }
@@ -83,23 +72,6 @@ $registrykeys = @(
 	)
 foreach ($registrykey in $registrykeys) {
     backup_registry_sddl $registrykey
-}
-
-###################################################
-# The least privileged user needs DCOM access
-# Write out the current access for each registry value
-# DefaultAccessPermission may not exist, which is OK
-###################################################
-Write-Output "`n`n==== DCOM Permissions ===="
-
-$registryvaluekeys = @{
-	"MachineAccessRestriction" = "HKLM:\software\microsoft\ole";
-	"MachineLaunchRestriction" = "HKLM:\software\microsoft\ole";
-    "DefaultAccessPermission" = "HKLM:\software\microsoft\ole"
-}
-
-foreach ($registryvaluekey in $registryvaluekeys.GetEnumerator()){
-    backup_dcom_permissions $registryvaluekey.Value $registryvaluekey.Name
 }
 
 ###################################################
