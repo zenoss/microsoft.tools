@@ -1,0 +1,23 @@
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd" xmlns:p="http://schemas.microsoft.com/wbem/wsman/1/wsman.xsd">
+    <s:Header>
+        <a:To>http://gilroy:5985/wsman</a:To>
+        <a:ReplyTo>
+            <a:Address s:mustUnderstand="true">http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address>
+        </a:ReplyTo>
+        <a:Action s:mustUnderstand="true">http://schemas.microsoft.com/wbem/wsman/1/windows/shell/Receive</a:Action>
+        <w:MaxEnvelopeSize s:mustUnderstand="true">153600</w:MaxEnvelopeSize>
+        <a:MessageID>uuid:D40A0940-F00D-4E7A-9DB2-D668853DC958</a:MessageID>
+        <w:Locale xml:lang="en-US" s:mustUnderstand="false" />
+        <p:DataLocale xml:lang="en-US" s:mustUnderstand="false" />
+        <w:ResourceURI xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">http://schemas.microsoft.com/wbem/wsman/1/windows/shell/cmd</w:ResourceURI>
+        <w:SelectorSet xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd" xmlns="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">
+            <w:Selector Name="ShellId">{shell_id}</w:Selector>
+        </w:SelectorSet>
+        <w:OperationTimeout>PT60.000S</w:OperationTimeout>
+    </s:Header>
+    <s:Body>
+        <rsp:Receive xmlns:rsp="http://schemas.microsoft.com/wbem/wsman/1/windows/shell" SequenceId="0">
+            <rsp:DesiredStream CommandId="{command_id}">stdout stderr</rsp:DesiredStream>
+        </rsp:Receive>
+    </s:Body>
+</s:Envelope>

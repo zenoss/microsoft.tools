@@ -1,0 +1,24 @@
+<s:Envelope xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:e="http://schemas.xmlsoap.org/ws/2004/08/eventing" xmlns:n="http://schemas.xmlsoap.org/ws/2004/09/enumeration" xmlns:p="http://schemas.microsoft.com/wbem/wsman/1/wsman.xsd" xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">
+    <s:Header>
+        <a:To>http://gilroy:5985/wsman</a:To>
+        <a:ReplyTo>
+            <a:Address s:mustUnderstand="true">http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:Address>
+        </a:ReplyTo>
+        <a:Action s:mustUnderstand="true">http://schemas.xmlsoap.org/ws/2004/08/eventing/Unsubscribe</a:Action>
+        <w:MaxEnvelopeSize s:mustUnderstand="true">153600</w:MaxEnvelopeSize>
+        <a:MessageID>uuid:2A0865D5-CA69-4CEC-A9BB-CAAF455DF2AE</a:MessageID>
+        <w:Locale s:mustUnderstand="false" xml:lang="en-US"/>
+        <p:DataLocale s:mustUnderstand="false" xml:lang="en-US"/>
+        <w:OptionSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <w:Option Name="SubscriptionName">ZenossSubscription</w:Option>
+            <w:Option Name="ContentFormat">RenderedText</w:Option>
+            <w:Option Name="IgnoreChannelError" xsi:nil="true"/>
+        </w:OptionSet>
+        <w:OperationTimeout>PT5.000S</w:OperationTimeout>
+        <w:ResourceURI xmlns:w="http://schemas.dmtf.org/wbem/wsman/1/wsman.xsd">http://schemas.microsoft.com/wbem/wsman/1/windows/EventLog</w:ResourceURI>
+        <e:Identifier xmlns:e="http://schemas.xmlsoap.org/ws/2004/08/eventing">{subscription_id}</e:Identifier>
+    </s:Header>
+    <s:Body>
+        <e:Unsubscribe/>
+    </s:Body>
+</s:Envelope>
