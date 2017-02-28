@@ -447,6 +447,15 @@ $namespaces = @(
 	"Root/WMI", 
 	"Root/CIMv2/Security/MicrosoftTpm"
 	)
+$ns = Get-WMIObject -class __Namespace -namespace root -Filter "name='WebAdministration'"
+if ($ns -ne $null){
+    $namespaces.add("Root/Webadministration")
+}
+$ns = Get-WMIObject -class __Namespace -namespace root -Filter "name='microsoftiisv2'"
+if ($ns -ne $null){
+    $namespaces.add("Root/microsoftiisv2")
+}
+
 $namespaceaccessmap = get_accessmask @("Enable","MethodExecute","ReadSecurity","RemoteAccess")
 foreach ($namespace in $namespaces) {
 	$namespaceParams = @{Namespace=$namespace;Path="__systemsecurity=@"}
