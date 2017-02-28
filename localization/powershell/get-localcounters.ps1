@@ -38,9 +38,9 @@ $Device = @(
     @('MemoryPagesInputSec',4,822),
     @('MemoryPagesOutputSec',4,48),
     @('PagingFileTotalUsage',700,702),
-    @('ProcessorTotalPrivilegedTime',238,144),
-    @('ProcessorTotalProcessorTime',238,6),
-    @('ProcessorTotalUserTime',238,142),
+    @('ProcessorTotalPrivilegedTime',238,144, '_Total'),
+    @('ProcessorTotalProcessorTime',238,6, '_Total'),
+    @('ProcessorTotalUserTime',238,142, '_Total'),
     @('sysUpTime',2,674)
 )
 
