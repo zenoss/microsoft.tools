@@ -28,6 +28,9 @@ Permission is set on the following namespaces:
 * "Root/RSOP/Computer"
 * "Root/WMI"
 * "Root/CIMv2/Security/MicrosoftTpm"
+If IIS is installed, one of the following namespaces depending upon IIS version
+* "Root/Webadministration"
+* "Root/microsoftiisv2"
 
 === Winrm access ===
 Access is given by through "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service\rootSDDL"
