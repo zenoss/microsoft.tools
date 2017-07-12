@@ -449,11 +449,11 @@ $namespaces = @(
 	)
 $ns = Get-WMIObject -class __Namespace -namespace root -Filter "name='WebAdministration'"
 if ($ns -ne $null){
-    $namespaces.add("Root/Webadministration")
+    $namespaces += "Root/Webadministration"
 }
 $ns = Get-WMIObject -class __Namespace -namespace root -Filter "name='microsoftiisv2'"
 if ($ns -ne $null){
-    $namespaces.add("Root/microsoftiisv2")
+    $namespaces += "Root/microsoftiisv2"
 }
 
 $namespaceaccessmap = get_accessmask @("Enable","MethodExecute","ReadSecurity","RemoteAccess")
@@ -479,11 +479,13 @@ allow_access_to_winrm $usersid
 $registrykeys = @(
 	"HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Perflib",
 	"HKLM:\system\currentcontrolset\control\securepipeservers\winreg",
+    "HKLM:\System\CurrentControlSet\Services\eventlog\Security",
 	"HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}",
 	"HKLM:\SYSTEM\CurrentControlSet\Services\Blfp\Parameters\Adapters",
 	"HKLM:\Software\Wow6432Node\Microsoft\Microsoft SQL Server",
 	"HKLM:\Software\Microsoft\Microsoft SQL Server"
 	)
+
 # NOTE: Registry keys security values are handled differently with set-acl
 # We do not have to convert
 $registrykeyaccessmap = "ReadPermissions, ReadKey, EnumerateSubKeys, QueryValues"
