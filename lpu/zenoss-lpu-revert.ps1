@@ -44,7 +44,8 @@ if(Test-Path $filepath) {
 $arrtext = $backupText -split "====.+====" | Where { $_.Length -gt 0 } | Foreach { $_.trim() }
 
 #WinRM security descriptor
-$winrmSddl = $arrtext[0].Split(":")[1].trim()
+$winrmLine = $arrtext[0] -split ":\s\s"
+$winrmSddl = $winrmLine[1]
 
 #Array of registry keys and their security descriptors
 $arrRegKeyPerm = $arrtext[1].Split("`n")
@@ -62,14 +63,30 @@ $arrServicePerm = $arrtext[3].Split("`n")
 ########################################
 
 function revert_winrm_access($sddl) {
-    $defaultkey = "O:NSG:BAD:P(A;;GA;;;BA)S:P(AU;FA;GA;;;WD)(AU;SA;GWGX;;;WD)"
     $sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
 
-    if ($sddl.Length -eq 0){
-        $sddl = $defaultkey
+    if ($sddl -ne $null -and $sddl.Length -ne 0){
+        #validation of the descriptor
+        try {
+            $emptyACL = New-Object System.Security.AccessControl.DirectorySecurity
+            $emptyACL.SetSecurityDescriptorSddlForm($sddl)
+        } catch {
+            $message = "Revert WinRM access failed.`n`tReason: The SDDL form is invalid"
+            Write-Host $message
+            continue
+        }
+
+        Set-ItemProperty $sddlkey -name "rootSDDL" -Value $sddl
+    }
+    else
+    {
+        #If sddl is empty then we delete 'rootSDDL' property
+        if((get-itemproperty $sddlkey).rootSDDL -ne $null) {
+            Remove-ItemProperty -Path $sddlkey -Name "rootSDDL"
+        }
     }
 
-    Set-ItemProperty $sddlkey -name "rootSDDL" -Value $sddl
+    Write-Host "WinRM access reverted: $sddlkey"
 }
 
 function revert_registry($regkey, $sddl) {
@@ -81,6 +98,12 @@ function revert_registry($regkey, $sddl) {
     } else {
         Write-Host "Registry key does not exists: $regkey"
     }
+
+    trap {
+        $message = "Revert registry key '$regkey' failed.`n`tReason: $_"
+        Write-Host $message
+        continue
+    }
 }
 
 function revert_folder($folderpath, $sddl) {
@@ -88,9 +111,15 @@ function revert_folder($folderpath, $sddl) {
          $secDesriptor = Get-Acl -Path $folderpath
          $secDesriptor.SetSecurityDescriptorSddlForm($sddl)
          Set-Acl -Path $folderpath -AclObject $secDesriptor
-         Write-Host "Folder / File reverted: $folderfile"
+         Write-Host "Folder/File reverted: $folderpath"
     } else {
-        Write-Host "Folder not found: $folderpath"
+        Write-Host "Revert folder/file '$folderpath' failed.`n`tReason: folder/file not found: $folderpath"
+    }
+
+    trap {
+        $message = "Revert folder '$folderpath' failed.`n`tReason: $_"
+        Write-Host $message
+        continue
     }
 }
 
@@ -124,8 +153,9 @@ foreach($registryLine in $arrRegKeyPerm) {
 
 foreach($folder in $arrFolderPerm) {
     $arrdata = $folder -split ":\s\s"
-    $folderPath = $arrdata[0]
+    $folderPath = $arrdata[0].TrimEnd(':')
     $sddl = $arrdata[1]
+
     revert_folder $folderPath $sddl
 }
 
