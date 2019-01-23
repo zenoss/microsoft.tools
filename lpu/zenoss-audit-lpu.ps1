@@ -456,10 +456,10 @@ foreach ($localgroup in $localgroups) {
         $localgroup = $GrObj.Translate([System.Security.Principal.NTAccount]).Value.split('\')[1]
     }
 	$grp_ret = is_user_in_group $localgroup
-    if ($sd_ret -eq $True) {
+    if ($grp_ret -eq $True) {
         Write-Host "`tUser $userfqdn is a member of the $localgroup group"
     }
-    elseif ($sd_ret -eq $false) {
+    elseif ($grp_ret -eq $false) {
         Write-Host "`tUser $userfqdn is not a member of the $localgroup group"
     }
     else {
