@@ -9,6 +9,25 @@
 #
 # Example usage:  PS > .\zenoss-lpu-revert.ps1 -f backup.txt
 
+<#
+    .SYNOPSIS
+    Rollback system permissions from backup file
+    .DESCRIPTION
+    This script rollbacks system permissions for WinRM/WinRS access, registry keys,
+    service querying and specific folder/file permissions.
+    .INPUT
+    -f or -file to specify the backup file path.
+    .EXAMPLE
+    .\zenoss-lpu-revert.ps1 -f backup.txt
+    .EXAMPLE
+    If the "zenoss-system-services.ps1" script was used then you need to run this script
+    as the system account.
+    CAUTION: To run this as the system account, use the psexec.exe program
+    to start a cmd shell. PSExec can be found as part of Windows Sysinternals
+    here: https://technet.microsoft.com/en-us/sysinternals/bb897553.aspx
+    > psexec.exe -s cmd
+    > powershell -file zenoss-lpu-revert.ps1 -f backup.txt
+#>
 
 ########################################
 #  ------------------------------------
@@ -124,11 +143,19 @@ function revert_folder($folderpath, $sddl) {
 }
 
 function revert_service($service, $sddl) {
-    $result = CMD /C "sc sdset $service $sddl"
+    $currentsddl = ([string](CMD /C "sc sdshow `"$service`"")).Trim()
+    $sddl = $sddl.Trim()
 
-    if ($result[0] -match '.FAILED.') {
-        $reason = $result[2]
-        $message = "Revert service $service failed.`n`tReason:  $reason"
+    if ($currentsddl -ne $sddl) {
+        $result = CMD /C "sc sdset $service $sddl"
+
+        if ($result[0] -match '.FAILED.') {
+            $reason = $result[2]
+            $message = "Revert service $service failed.`n`tReason:  $reason"
+        } else {
+            $message = "Revert service $service successful."
+        }
+
     } else {
         $message = "Revert service $service successful."
     }

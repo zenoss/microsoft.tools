@@ -22,7 +22,7 @@
 
 function backup_winrm_access(){
     $sddlkey = "HKLM:SOFTWARE\Microsoft\Windows\CurrentVersion\WSMAN\Service"
-    $rootsddlkey = get-itemproperty $sddlkey -Name “rootSDDL”
+    $rootsddlkey = get-itemproperty $sddlkey -Name "rootSDDL"
     $output = "winrm:  {0}" -f $rootsddlkey.rootSDDL
     Write-Output $output
 }
@@ -84,7 +84,7 @@ $folderfiles = @(
 	"C:\Windows\system32\inetsrv\config"
 	)
 foreach($folderfile in $folderfiles){
-	backup_folderfile $folderfile 
+	backup_folderfile $folderfile
 }
 
 
@@ -98,4 +98,3 @@ $services = get-wmiobject -query "Select * from Win32_Service"
 foreach ($service in $services){
 	backup_service_sddl $service.name
 }
-
