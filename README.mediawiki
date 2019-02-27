@@ -61,9 +61,9 @@ To remove users from a group, you could simply use a GPO.
 
 The following groups are either local to a server or are at the domain level.
 * "Performance Monitor Users",
-* "Performance Log Users", 
-* "Event Log Readers", 
-* "Distributed COM Users", 
+* "Performance Log Users",
+* "Event Log Readers",
+* "Distributed COM Users",
 * "WinRMRemoteWMIUsers__"
 
 === “Read Folder” access to "C:\Windows\system32\inetsrv\config" if it exists ===
@@ -81,8 +81,8 @@ To backup a service sddl you could do something like the following on each servi
 
 We assign the following permissions:
 * SERVICE_QUERY_CONFIG
-* SERVICE_QUERY_STATUS 
-* SERVICE_INTERROGATE 
+* SERVICE_QUERY_STATUS
+* SERVICE_INTERROGATE
 * READ_CONTROL
 * SERVICE_START
 
@@ -93,4 +93,4 @@ Some services are owned by the SYSTEM account and the permissions cannot be alte
     psexec.exe -s cmd
 * You can then execute the powershell script to update the system owned service permissions.
 
-    powershell -file "zenoss-system-services.ps1 -u zenny@zenoss.com"
+    powershell -file zenoss-system-services.ps1 -u zenny@zenoss.com
