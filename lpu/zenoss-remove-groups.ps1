@@ -36,30 +36,6 @@ param(
 
 ########################################
 #  ------------------------------------
-#  ----------- Initialization  --------
-#  ------------------------------------
-########################################
-
-# The following values will be set at runtime. They are place holders here.
-$usersid
-
-# Set account information
-
-if($login.contains("@")){
-	$arrlogin = $login.split("@")
-	$arrdomain = $arrlogin[1].split(".")
-    $domain = $arrdomain[0]
-	$username = $arrlogin[0]
-	$userfqdn = $login
-}
-else{
-	$domain = $env:COMPUTERNAME
-	$username = $login
-	$userfqdn = "{1}\{0}" -f $username, $domain
-}
-
-########################################
-#  ------------------------------------
 #  -----------  Functions -------------
 #  ------------------------------------
 ########################################
@@ -67,17 +43,21 @@ else{
 function remove_user_from_group($groupname) {
     try
     {
-        $objADSI = [ADSI]"WinNT://./$groupname,group"
-        $objADSIUser = [ADSI]"WinNT://$domain/$username"
-        [array]$objMembers = $objADSI.psbase.Invoke("Members")
-        $objADSI.psbase.Invoke("Remove",$objADSIUser.psbase.path)
-        $message = "User removed from group: $groupname"
-        write-host $message
+        Invoke-Command -ComputerName $env:COMPUTERNAME -Command {
+            net localgroup $args[0] $args[1] /delete
+        } -ArgumentList $groupname, $login -ErrorVariable error -ErrorAction SilentlyContinue
+
+        if($error){
+            # $error = $error[1].ToString().Trim()
+            Write-Host "[$groupname] User not removed from local group. `n`tReason: $error"
+        } else {
+            Write-Host "[$groupname] User removed from group"
+        }
     }
     catch
     {
         $message = "[$groupname] $($_.Exception.InnerException.Message)"
-        write-host $message
+        write-host $message send_event $error[0] 'Error'
         continue
     }
 }

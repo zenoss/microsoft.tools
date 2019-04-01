@@ -126,19 +126,23 @@ function get_user_sid($getuser=$userfqdn) {
 		$message = "User does not exists: $getuser"
 		write-host $message
 		send_event $message 'Error'
-		continue
+		exit
 	}
 }
 
 function add_user_to_group($groupname) {
     try
     {
-        $objADSI = [ADSI]"WinNT://./$groupname,group"
-        $objADSIUser = [ADSI]"WinNT://$domain/$username"
-        [array]$objMembers = $objADSI.psbase.Invoke("Members")
-        $objADSI.psbase.Invoke("Add",$objADSIUser.psbase.path)
-        $message = "User added to group: $groupname"
-        send_event $message 'Information'
+        Invoke-Command -ComputerName $env:COMPUTERNAME -Command {
+            $res = net localgroup $args[0] $args[1] /add
+        } -ArgumentList $groupname, $login -ErrorVariable error -ErrorAction SilentlyContinue
+
+        if($error){
+            # $error = $error[1].ToString().Trim()
+            Write-Host "[$groupname] User not added to local group. `n`tReason: $error"
+        } else {
+            Write-Host "[$groupname] User added to group"
+        }
     }
     catch
     {
@@ -510,6 +514,10 @@ $localgroups = @(
 	"S-1-5-32-562",
 	"WinRMRemoteWMIUsers__"
 	)
+
+Invoke-Command -ComputerName $env:COMPUTERNAME -Command {
+    $res = net localgroup /add "WinRMRemoteWMIUsers__"
+} -ErrorAction SilentlyContinue
 
 foreach ($localgroup in $localgroups) {
     if ($localgroup.StartsWith('S-1-5-32-')) {
