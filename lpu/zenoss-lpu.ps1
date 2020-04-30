@@ -29,8 +29,6 @@
 #  DO NOT DELETE USER WITHOUT BACKING OUT CHANGES MADE BY LPU SCRIPT!                   #
 #      Run zenoss-audit-lpu.ps1 to see which changes will be made and make a backup     #
 #      of your settings.                                                                #
-#  DO NOT RUN THE DCOM PERMISSIONS PORTION OF THIS SCRIPT WHEN THE CERTIFICATE          #
-#       AUTHORITY ROLE IS PRESENT IN ACTIVE DIRECTORY                                   #
 #                                                                                       #
 #########################################################################################
 
