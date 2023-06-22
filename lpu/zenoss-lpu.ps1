@@ -506,6 +506,7 @@ $localgroups = @(
 	"S-1-5-32-558",
 	"S-1-5-32-559",
 	"S-1-5-32-573",
+	"S-1-5-32-562",
 	"WinRMRemoteWMIUsers__",
 	"Remote Management Users"
 	)
