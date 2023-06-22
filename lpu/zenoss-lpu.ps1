@@ -499,14 +499,15 @@ foreach ($registrykey in $registrykeys) {
 #    "Performance Log Users",
 #    "Event Log Readers",
 #    "Distributed COM Users",
-#    "WinRMRemoteWMIUsers__"
+#    "WinRMRemoteWMIUsers__",
+#    "Remote Management Users"
 ########################################################################
 $localgroups = @(
 	"S-1-5-32-558",
 	"S-1-5-32-559",
 	"S-1-5-32-573",
-	"S-1-5-32-562",
-	"WinRMRemoteWMIUsers__"
+	"WinRMRemoteWMIUsers__",
+	"Remote Management Users"
 	)
 
 foreach ($localgroup in $localgroups) {
