@@ -499,17 +499,25 @@ foreach ($registrykey in $registrykeys) {
 #    "Performance Log Users",
 #    "Event Log Readers",
 #    "Distributed COM Users",
-#    "WinRMRemoteWMIUsers__",
-#    "Remote Management Users"
+#    "Remote Management Users" for Windows 2016+
+#    "WinRMRemoteWMIUsers__", for Windows older versions
 ########################################################################
 $localgroups = @(
 	"S-1-5-32-558",
 	"S-1-5-32-559",
 	"S-1-5-32-573",
-	"S-1-5-32-562",
-	"WinRMRemoteWMIUsers__",
-	"Remote Management Users"
+	"S-1-5-32-562"
 	)
+# Get the windows version to determine which local group should be added
+$version = (Get-CimInstance Win32_OperatingSystem).Version.split(".")[0]
+
+# Check if Windows version is equal or greater than 10
+if ([int]$version -ge 10) {
+	$localgroups += "Remote Management Users"
+	}
+else {
+	$localgroups += "WinRMRemoteWMIUsers__"
+}
 
 foreach ($localgroup in $localgroups) {
     if ($localgroup.StartsWith('S-1-5-32-')) {
